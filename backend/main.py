@@ -46,10 +46,21 @@ async def lifespan(app: FastAPI):
     init_mlflow()
     logger.info("MLflow inicializado", module="mlflow")
     
+    # Inicializar Workers
+    from app.workers.worker_manager import worker_manager
+    import asyncio
+    asyncio.create_task(worker_manager.start_all())
+    logger.info("Workers automáticos iniciados", module="workers")
+    
     yield
     
     # Shutdown
     logger.info("A encerrar Alert@Postas V3", module="main")
+    
+    # Parar Workers
+    from app.workers.worker_manager import worker_manager
+    await worker_manager.stop_all()
+    logger.info("Workers parados", module="workers")
 
 
 # Criar aplicação FastAPI

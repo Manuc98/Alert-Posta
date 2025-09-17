@@ -4,7 +4,7 @@ Router principal da API v1 para Alert@Postas V3
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import bot, games, signals, models, metrics, auth, users, telegram, metrics_prometheus, alerts
+from app.api.v1.endpoints import bot, games, signals, models, metrics, auth, users, telegram, metrics_prometheus, alerts, workers
 
 api_router = APIRouter()
 
@@ -19,3 +19,4 @@ api_router.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
 api_router.include_router(telegram.router, prefix="/telegram", tags=["telegram"])
 api_router.include_router(metrics_prometheus.router, tags=["prometheus"])
 api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+api_router.include_router(workers.router, prefix="/workers", tags=["workers"])

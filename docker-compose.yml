@@ -70,6 +70,9 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - ENVIRONMENT=development
       - DEBUG=true
+      - API_FOOTBALL_KEY=623ead667fb69f339d1e8f9a366de721
+      - TELEGRAM_BOT_TOKEN=8031960776:AAFmB-UhPTfj3YauD6PPkjQW2VTsngJ3AIU
+      - TELEGRAM_CHAT_ID=-1002937302746
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,11 +84,43 @@ services:
       - ./backend:/app
       - ./models:/app/models
       - ./datasets:/app/datasets
+      - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Workers Automáticos
+  workers:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python start_workers.py
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/alertpostas
+      - REDIS_URL=redis://redis:6379/0
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - API_FOOTBALL_KEY=623ead667fb69f339d1e8f9a366de721
+      - TELEGRAM_BOT_TOKEN=8031960776:AAFmB-UhPTfj3YauD6PPkjQW2VTsngJ3AIU
+      - TELEGRAM_CHAT_ID=-1002937302746
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
+      - ./datasets:/app/datasets
+      - ./logs:/app/logs
+    restart: unless-stopped
 
   # Frontend Next.js
   frontend:
