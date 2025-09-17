@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     
     # API Football
     FOOTBALL_API_KEY: str = "623ead667fb69f339d1e8f9a366de721"
+    API_FOOTBALL_KEY: str = "623ead667fb69f339d1e8f9a366de721"
+    
+    # Cloudflare Worker
+    CLOUDFLARE_WORKER_URL: Optional[str] = None
+    CLOUDFLARE_API_TOKEN: Optional[str] = None
     FOOTBALL_API_URL: str = "https://v3.football.api-sports.io"
     
     # Observabilidade

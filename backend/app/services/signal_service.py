@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.core.logging import get_logger
 from app.core.cache import cache_manager
 from app.core.exceptions import SignalNotFoundException
+from app.core.config import settings
 from app.models.signal import Signal
 from app.models.game import Game
 from app.models.model import Model
@@ -432,3 +433,30 @@ class SignalService:
 🤖 Módulo: {signal.module}"""
         
         return message
+    
+    async def _notify_cloudflare_update(self):
+        """Notificar Cloudflare Worker para atualizar dados do site"""
+        try:
+            cloudflare_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', None)
+            
+            if not cloudflare_url:
+                logger.debug("CLOUDFLARE_WORKER_URL não configurada, ignorando notificação")
+                return
+            
+            import httpx
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{cloudflare_url}/site/update",
+                    headers={
+                        "Content-Type": "application/json"
+                    }
+                )
+                
+                if response.status_code == 200:
+                    logger.debug("Cloudflare Worker notificado para atualizar dados do site")
+                else:
+                    logger.warning(f"Erro ao notificar Cloudflare Worker: {response.status_code}")
+                    
+        except Exception as e:
+            logger.error(f"Erro ao notificar Cloudflare Worker: {str(e)}")
