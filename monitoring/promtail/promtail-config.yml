@@ -1,0 +1,55 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: alertpostas
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: alertpostas
+          __path__: /var/log/alertpostas/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            module: module
+            category: category
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      - labels:
+          level:
+          module:
+          category:
+      - output:
+          source: message
+
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          __path__: /var/log/alertpostas/system/*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>\w+)\] \((?P<service>\w+)\) \| \[(?P<module>\w+)\] (?P<message>.*)'
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+      - labels:
+          level:
+          service:
+          module:
+      - output:
+          source: message
