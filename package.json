@@ -9,6 +9,8 @@
     "deploy:clean": "wrangler deploy --config wrangler.clean.toml",
     "deploy:free": "wrangler deploy --config wrangler.free.toml --env free",
     "deploy:production": "wrangler deploy --env production",
+    "fix:durable": "node -e \"console.log('Use: fix-durable-objects.bat (Windows) or ./fix-durable-objects.sh (Linux/Mac)')\"",
+    "delete:old": "wrangler delete alertapostas --force && wrangler delete alertapostas-new --force && wrangler delete alertapostas-v3 --force",
     "build": "echo 'No build step required for this worker'",
     "test": "echo 'No tests configured'",
     "lint": "eslint src/",
