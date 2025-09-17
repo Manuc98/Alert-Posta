@@ -1,0 +1,19 @@
+name = "alertapostas"
+main = "src/index.js"
+compatibility_date = "2025-09-17"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "alertapostas"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+API_BASE_URL = "https://your-backend-url.com"
+
+# Configurações de cron triggers (para workers automáticos)
+[[triggers]]
+crons = ["*/5 * * * *"]  # A cada 5 minutos
+
+# Configurações de limites
+[limits]
+cpu_ms = 50000  # 50 segundos de CPU por request
