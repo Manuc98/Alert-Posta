@@ -103,6 +103,15 @@ O worker executa automaticamente:
 
 ### 🐛 Troubleshooting
 
+#### Erro de Durable Objects:
+```
+New version of script does not export class 'BotState' which is depended on by existing Durable Objects
+```
+**Solução:** 
+1. Execute `npm run deploy:clean` (usa novo nome)
+2. Ou delete worker antigo: `wrangler delete alertapostas --force`
+3. Use `deploy-clean.bat` (Windows) ou `deploy-clean.sh` (Linux/Mac)
+
 #### Erro de CPU Limits:
 ```
 CPU limits are not supported for the Free plan
