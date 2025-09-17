@@ -11,12 +11,8 @@ ENVIRONMENT = "production"
 API_BASE_URL = "https://your-backend-url.com"
 
 # Configurações de cron triggers (para workers automáticos)
-[[triggers]]
+[triggers]
 crons = [
   "*/5 * * * *",  # A cada 5 minutos - trigger workers
   "*/1 * * * *"   # A cada 1 minuto - atualizar dados do site
 ]
-
-# Configurações de limites
-[limits]
-cpu_ms = 50000  # 50 segundos de CPU por request

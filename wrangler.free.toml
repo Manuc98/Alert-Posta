@@ -1,0 +1,19 @@
+name = "alertapostas"
+main = "src/index.js"
+compatibility_date = "2025-01-17"
+
+# Configuração para plano gratuito (sem CPU limits)
+[env.free.vars]
+ENVIRONMENT = "free"
+API_BASE_URL = "https://your-backend-url.com"
+
+# Configurações de cron triggers (para workers automáticos)
+[triggers]
+crons = [
+  "*/10 * * * *",  # A cada 10 minutos - trigger workers (reduzido para plano gratuito)
+  "*/2 * * * *"    # A cada 2 minutos - atualizar dados do site (reduzido para plano gratuito)
+]
+
+# Configurações específicas para plano gratuito
+[compatibility_flags]
+nodejs_compat = true
