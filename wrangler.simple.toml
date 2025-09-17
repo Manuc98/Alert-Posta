@@ -1,16 +1,7 @@
 name = "alertapostas"
-main = "src/index.js"
+main = "src/index-simple.js"
 compatibility_date = "2025-09-17"
 compatibility_flags = ["nodejs_compat"]
-
-# Migrações para deletar Durable Objects existentes
-[[migrations]]
-tag = "v1"
-deleted_classes = ["BotState"]
-
-[[migrations]]
-tag = "v2"
-deleted_classes = ["BotState"]
 
 # Configurações de cron triggers (para workers automáticos)
 [triggers]

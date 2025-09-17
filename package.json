@@ -12,6 +12,7 @@
     "fix:durable": "node -e \"console.log('Use: fix-durable-objects.bat (Windows) or ./fix-durable-objects.sh (Linux/Mac)')\"",
     "fix:migration": "node -e \"console.log('Use: fix-migration.bat (Windows) or ./fix-migration.sh (Linux/Mac)')\"",
     "deploy:migration": "wrangler deploy --config wrangler.migration.toml",
+    "deploy:simple": "wrangler deploy --config wrangler.simple.toml",
     "delete:old": "wrangler delete alertapostas --force && wrangler delete alertapostas-new --force && wrangler delete alertapostas-v3 --force",
     "build": "echo 'No build step required for this worker'",
     "test": "echo 'No tests configured'",

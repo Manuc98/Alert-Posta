@@ -108,11 +108,12 @@ O worker executa automaticamente:
 New version of script does not export class 'BotState' which is depended on by existing Durable Objects
 ```
 **Solução:** 
-1. **Windows:** Execute `fix-migration.bat` (RECOMENDADO)
-2. **Linux/Mac:** Execute `chmod +x fix-migration.sh && ./fix-migration.sh` (RECOMENDADO)
-3. **Manual:** `npm run deploy:migration`
-4. **Alternativa:** `npm run delete:old && npm run deploy:clean`
-5. **Última opção:** Use `npm run deploy:free` (plano gratuito)
+1. **Windows:** Execute `force-deploy.bat` (MAIS RECOMENDADO)
+2. **Linux/Mac:** Execute `chmod +x force-deploy.sh && ./force-deploy.sh` (MAIS RECOMENDADO)
+3. **Manual:** `npm run deploy:simple` (versão sem Durable Objects)
+4. **Migração:** `npm run deploy:migration`
+5. **Alternativa:** `npm run delete:old && npm run deploy:clean`
+6. **Última opção:** Use `npm run deploy:free` (plano gratuito)
 
 #### Erro de CPU Limits:
 ```
