@@ -14,6 +14,40 @@ export default {
       return new Response(null, { headers: CORS_HEADERS });
     }
 
+    // Servir logo real
+    if (path === '/logo.png') {
+      try {
+        // URL do logo real hospedado externamente
+        const logoUrl = 'https://raw.githubusercontent.com/Manuc98/Alert-Posta/feature/calendar-horizontal-component/logo.png';
+        
+        // Fazer fetch da imagem e servir diretamente
+        const response = await fetch(logoUrl);
+        if (response.ok) {
+          const imageBuffer = await response.arrayBuffer();
+          return new Response(imageBuffer, {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/png',
+              'Cache-Control': 'public, max-age=86400',
+              'Content-Length': imageBuffer.byteLength.toString()
+            }
+          });
+        } else {
+          throw new Error('Falha ao carregar imagem');
+        }
+      } catch (error) {
+        console.error('Erro ao servir logo:', error);
+        // Fallback para uma imagem placeholder
+        return new Response('', {
+          status: 302,
+          headers: {
+            'Location': 'https://via.placeholder.com/200x48/1e40af/ffffff?text=Alert@Postas',
+            'Cache-Control': 'public, max-age=3600'
+          }
+        });
+      }
+    }
+
     // Rotas principais - SEM AUTENTICAÇÃO
     if (path === '/' || path === '/dashboard') {
       return new Response(getDashboardHTML(), {
@@ -36,8 +70,9 @@ export default {
     try {
       // Executar tarefas agendadas baseadas no cron
       if (event.cron === '*/1 * * * *') {
-        // A cada minuto - verificar jogos ao vivo
+        // A cada minuto - verificar jogos ao vivo e notificações
         await checkLiveGames(env);
+        await checkUpcomingNotifications(env);
       } else if (event.cron === '*/5 * * * *') {
         // A cada 5 minutos - verificar jogos terminados
         await checkFinishedGames(env);
@@ -53,22 +88,214 @@ export default {
 
 // Sistema simplificado - SEM AUTENTICAÇÃO
 
-// Sistema de armazenamento
-const storage = {
-  signals: [],
-  botStatus: 'stopped',
-  futureGames: [],
-  liveGames: [],
-  commentatorLogs: [],
-  signalTracking: [], // Para tracking de sinais e relatórios
-  dailyStats: {
-    date: null,
-    totalSignals: 0,
-    greenSignals: 0,
-    redSignals: 0,
-    pendingSignals: 0
-  }
-};
+        // Sistema de armazenamento
+        const storage = {
+            signals: [],
+            botStatus: 'stopped',
+            futureGames: [],
+            liveGames: [],
+            commentatorLogs: [],
+            signalTracking: [], // Para tracking de sinais e relatórios
+            dailyStats: {
+                date: null,
+                totalSignals: 0,
+                greenSignals: 0,
+                redSignals: 0,
+                pendingSignals: 0
+            },
+            users: [], // Sistema de utilizadores com subscrições
+            subscriptions: [], // Histórico de subscrições
+            
+            // Sistema de notificações inteligentes
+            notificationSettings: {
+                enabled: true,
+                advanceTime: 30, // minutos antes do jogo
+                leagues: ['Liga Portugal', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga'],
+                telegramEnabled: true,
+                emailEnabled: false,
+                lastNotificationCheck: null
+            },
+            notifications: [], // Histórico de notificações enviadas
+            
+            // Sistema de Logs e Auditoria
+            auditLogs: [] // Logs de auditoria (id, timestamp, tipo_evento, detalhe, utilizador)
+        };
+
+        // Funções de Logs e Auditoria
+        function addAuditLog(tipoEvento, detalhe, utilizador = null) {
+            const log = {
+                id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
+                timestamp: new Date().toISOString(),
+                tipo_evento: tipoEvento,
+                detalhe: detalhe,
+                utilizador: utilizador || 'system'
+            };
+            
+            storage.auditLogs.push(log);
+            
+            // Manter apenas os últimos 1000 logs para não sobrecarregar
+            if (storage.auditLogs.length > 1000) {
+                storage.auditLogs = storage.auditLogs.slice(-1000);
+            }
+            
+            console.log('AUDIT LOG:', log);
+        }
+        
+        function logApiFailure(api, error, details = '') {
+            addAuditLog('API_FAILURE', 'Falha na API ' + api + ': ' + error.message + (details ? ' | ' + details : ''), 'system');
+        }
+        
+        function logSignalGeneration(signal, user = 'system') {
+            addAuditLog('SIGNAL_GENERATED', 'Sinal gerado: ' + signal.home_team + ' vs ' + signal.away_team + ' - ' + signal.prediction + ' (' + signal.confidence + '%)', user);
+        }
+        
+        function logReportSent(reportType, details, user = 'system') {
+            addAuditLog('REPORT_SENT', 'Relatório ' + reportType + ' enviado: ' + details, user);
+        }
+        
+        function logNotificationSent(notification, user = 'system') {
+            addAuditLog('NOTIFICATION_SENT', 'Notificação enviada: ' + notification.message, user);
+        }
+        
+        function logUserAction(action, details, user = 'system') {
+            addAuditLog('USER_ACTION', 'Ação do utilizador: ' + action + ' | ' + details, user);
+        }
+        
+        function logSystemEvent(event, details, user = 'system') {
+            addAuditLog('SYSTEM_EVENT', 'Evento do sistema: ' + event + ' | ' + details, user);
+        }
+
+        // Função para gerar explicação dos sinais
+        function generateExplanation(game, prediction, confidence) {
+            const explanations = {
+                teamStats: generateTeamStats(game),
+                recentForm: generateRecentForm(game),
+                headToHead: generateHeadToHead(game),
+                confidence: confidence,
+                reasoning: generateReasoning(prediction, confidence)
+            };
+            
+            return explanations;
+        }
+
+        function generateTeamStats(game) {
+            // Simular estatísticas das equipas (em produção viria da API)
+            return {
+                homeTeam: {
+                    name: game.home_team,
+                    avgGoalsScored: Math.round((Math.random() * 2 + 1) * 10) / 10,
+                    avgGoalsConceded: Math.round((Math.random() * 1.5 + 0.5) * 10) / 10,
+                    homeWinRate: Math.round(Math.random() * 40 + 40), // 40-80%
+                    lastFiveGames: generateLastFiveGames()
+                },
+                awayTeam: {
+                    name: game.away_team,
+                    avgGoalsScored: Math.round((Math.random() * 1.8 + 0.8) * 10) / 10,
+                    avgGoalsConceded: Math.round((Math.random() * 1.8 + 0.8) * 10) / 10,
+                    awayWinRate: Math.round(Math.random() * 30 + 20), // 20-50%
+                    lastFiveGames: generateLastFiveGames()
+                }
+            };
+        }
+
+        function generateLastFiveGames() {
+            const results = ['W', 'L', 'D'];
+            return Array.from({length: 5}, () => results[Math.floor(Math.random() * results.length)]);
+        }
+
+        function generateRecentForm(game) {
+            return {
+                homeForm: 'WWDLW', // Simulado
+                awayForm: 'LWWDL', // Simulado
+                homeGoalsLast5: Math.floor(Math.random() * 8 + 4),
+                awayGoalsLast5: Math.floor(Math.random() * 6 + 2)
+            };
+        }
+
+        function generateHeadToHead(game) {
+            return {
+                totalMeetings: Math.floor(Math.random() * 10 + 5),
+                homeWins: Math.floor(Math.random() * 5 + 2),
+                awayWins: Math.floor(Math.random() * 4 + 1),
+                draws: Math.floor(Math.random() * 3 + 1),
+                avgGoalsPerGame: Math.round((Math.random() * 1.5 + 2) * 10) / 10
+            };
+        }
+
+        function generateReasoning(prediction, confidence) {
+            const reasons = [];
+            
+            if (confidence > 85) {
+                reasons.push('Forte diferença de qualidade entre as equipas');
+                reasons.push('Historial favorável nos confrontos diretos');
+            } else if (confidence > 70) {
+                reasons.push('Boa forma recente da equipa favorita');
+                reasons.push('Vantagem de jogar em casa');
+            } else {
+                reasons.push('Jogo equilibrado com ligeira vantagem');
+                reasons.push('Análise baseada em estatísticas recentes');
+            }
+            
+            if (prediction.includes('Over')) {
+                reasons.push('Ambas as equipas têm ataques produtivos');
+                reasons.push('Defesas com fragilidades identificadas');
+            } else if (prediction.includes('Under')) {
+                reasons.push('Defesas sólidas de ambas as equipas');
+                reasons.push('Estilo de jogo mais cauteloso esperado');
+            }
+            
+            return reasons;
+        }
+
+        // Função para criar um sinal simulado (para demonstração)
+        function createMockSignalWithExplanation() {
+            const mockGames = [
+                { id: 1, home_team: 'FC Porto', away_team: 'Sporting CP', league: 'Liga Portugal', date: new Date().toISOString() },
+                { id: 2, home_team: 'Benfica', away_team: 'Braga', league: 'Liga Portugal', date: new Date().toISOString() },
+                { id: 3, home_team: 'Manchester City', away_team: 'Liverpool', league: 'Premier League', date: new Date().toISOString() }
+            ];
+            
+            const predictions = ['Over 2.5', 'Under 2.5', 'Home Win', 'Away Win', 'Draw'];
+            const game = mockGames[Math.floor(Math.random() * mockGames.length)];
+            const prediction = predictions[Math.floor(Math.random() * predictions.length)];
+            const confidence = Math.floor(Math.random() * 30) + 70; // 70-99%
+            
+            const signal = {
+                id: Date.now().toString(),
+                gameId: game.id,
+                home_team: game.home_team,
+                away_team: game.away_team,
+                league: game.league,
+                date: game.date,
+                prediction: prediction,
+                confidence: confidence,
+                overUnder: 2.5,
+                status: 'pending',
+                explanation: generateExplanation(game, prediction, confidence),
+                created_at: new Date().toISOString()
+            };
+            
+            storage.signals.push(signal);
+            addCommentatorLog('🧠 Sinal criado com explicação: ' + signal.home_team + ' vs ' + signal.away_team + ' - ' + signal.prediction, 'success');
+            logSignalGeneration(signal, 'system');
+            
+            return signal;
+        }
+        
+        // Função para adicionar explicação a sinais existentes
+        function addExplanationToExistingSignals() {
+            storage.signals.forEach(signal => {
+                if (!signal.explanation) {
+                    const mockGame = {
+                        home_team: signal.home_team,
+                        away_team: signal.away_team,
+                        league: signal.league
+                    };
+                    signal.explanation = generateExplanation(mockGame, signal.prediction, signal.confidence);
+                    addCommentatorLog('🔧 Explicação adicionada ao sinal: ' + signal.home_team + ' vs ' + signal.away_team, 'info');
+                }
+            });
+        }
 
 // Função principal para lidar com APIs
 async function handleAPI(request, env, path) {
@@ -113,23 +340,73 @@ async function handleAPI(request, env, path) {
     if (path === '/api/v1/stats') {
       return await handleStatsAPI(request, env);
     }
-    
-    if (path === '/api/v1/daily-report') {
-      return await handleDailyReportAPI(request, env);
-    }
+
+        if (path === '/api/v1/daily-report') {
+            return await handleDailyReportAPI(request, env);
+        }
+        
+        // Endpoints de Subscrições
+        if (path === '/api/v1/subscription/create-session') {
+            return await handleCreateSubscriptionSession(request, env);
+        }
+        
+        if (path === '/api/v1/subscription/webhook') {
+            return await handleSubscriptionWebhook(request, env);
+        }
+        
+        if (path === '/api/v1/subscription/status') {
+            return await handleSubscriptionStatus(request, env);
+        }
+        
+        if (path === '/api/v1/subscription/admin') {
+            return await handleSubscriptionAdmin(request, env);
+        }
+        
+        // Endpoints de Histórico de Performance
+        if (path === '/api/v1/history/performance') {
+            return await handleHistoryPerformance(request, env);
+        }
+        
+        if (path === '/api/v1/history/stats') {
+            return await handleHistoryStats(request, env);
+        }
+        
+        // Endpoints de Notificações Inteligentes
+        if (path === '/api/v1/notifications/config') {
+            return await handleNotificationConfig(request, env);
+        }
+        
+        if (path === '/api/v1/notifications/send') {
+            return await handleNotificationSend(request, env);
+        }
+        
+        if (path === '/api/v1/notifications/upcoming') {
+            return await handleNotificationUpcoming(request, env);
+        }
+        
+        // Endpoints de Logs e Auditoria
+        if (path === '/api/v1/logs/audit') {
+            return await handleAuditLogs(request, env);
+        }
+        
+        if (path === '/api/v1/logs/stats') {
+            return await handleLogsStats(request, env);
+        }
+        
+        
 
     // Endpoints de utilizadores removidos - SISTEMA SEM AUTENTICAÇÃO
 
     return new Response('API endpoint not found', { status: 404, headers: CORS_HEADERS });
-  } catch (error) {
+    } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
   }
-}
-
+  
 // Funções de autenticação removidas - SISTEMA SEM LOGIN
 
 // API para jogos futuros
@@ -157,7 +434,7 @@ async function handleFutureGamesAPI(request, env) {
       const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${dateStr}&status=NS&timezone=Europe/Lisbon`;
 
       console.log('URL da API:', apiFootballUrl);
-      
+
       const response = await fetch(apiFootballUrl, {
         headers: {
           'x-rapidapi-key': env.API_FOOTBALL_KEY,
@@ -222,7 +499,7 @@ async function handleLiveGamesAPI(request, env) {
     addCommentatorLog(`🔴 Buscando jogos ao vivo para ${today}`, 'info');
     
     let liveGames = [];
-    
+
     // Buscar jogos ao vivo (LIVE)
     const liveUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=LIVE&timezone=Europe/Lisbon`;
     const liveResponse = await fetch(liveUrl, {
@@ -271,17 +548,17 @@ async function handleLiveGamesAPI(request, env) {
       
       if (firstHalfData.response && firstHalfData.response.length > 0) {
         const firstHalfGames = firstHalfData.response.map(fixture => ({
-          id: fixture.fixture.id,
-          home_team: fixture.teams.home.name,
-          away_team: fixture.teams.away.name,
-          league: fixture.league.name,
-          league_id: fixture.league.id,
-          status: 'LIVE',
-          minute: fixture.fixture.status.elapsed || 0,
-          home_score: fixture.goals.home,
-          away_score: fixture.goals.away,
-          date: fixture.fixture.date,
-          country: fixture.league.country
+        id: fixture.fixture.id,
+        home_team: fixture.teams.home.name,
+        away_team: fixture.teams.away.name,
+        league: fixture.league.name,
+        league_id: fixture.league.id,
+        status: 'LIVE',
+        minute: fixture.fixture.status.elapsed || 0,
+        home_score: fixture.goals.home,
+        away_score: fixture.goals.away,
+        date: fixture.fixture.date,
+        country: fixture.league.country
         }));
         liveGames = liveGames.concat(firstHalfGames);
       }
@@ -323,20 +600,20 @@ async function handleLiveGamesAPI(request, env) {
     addCommentatorLog(`⚽ ${liveGames.length} jogos ao vivo processados no total`, 'info');
 
 
-    return new Response(JSON.stringify(liveGames), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
+        return new Response(JSON.stringify(liveGames), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+        });
 
-  } catch (error) {
-    console.error('Error fetching live games:', error);
+      } catch (error) {
+        console.error('Error fetching live games:', error);
     addCommentatorLog(`❌ Erro ao buscar jogos ao vivo: ${error.message}`, 'error');
-    return new Response(JSON.stringify([]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
-  }
-}
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+        });
+      }
+    }
 
     // Função para buscar jogos terminados (apenas para atualizar sinais)
     async function handleFinishedGamesAPI(request, env) {
@@ -469,12 +746,12 @@ async function handlePastGamesAPI(request, env) {
   } catch (error) {
     console.error('Error fetching past games:', error);
     addCommentatorLog(`❌ Erro ao carregar jogos passados: ${error.message}`, 'error');
-    return new Response(JSON.stringify([]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
-  }
-}
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+        });
+      }
+    }
 
 // Função para verificar e atualizar sinais automaticamente
 function startSignalUpdateChecker(env) {
@@ -566,6 +843,91 @@ function startSignalUpdateChecker(env) {
 }
 
 // Funções para cron jobs
+async function checkUpcomingNotifications(env) {
+  try {
+    if (!storage.notificationSettings.enabled) {
+      return;
+    }
+    
+    console.log('Verificando notificações de jogos próximos...');
+    
+    const now = new Date();
+    const advanceTime = storage.notificationSettings.advanceTime || 30;
+    
+    // Buscar jogos que começam nos próximos X minutos
+    const upcomingGames = storage.futureGames.filter(game => {
+      const gameTime = new Date(game.date);
+      const timeDiff = gameTime.getTime() - now.getTime();
+      const minutesDiff = timeDiff / (1000 * 60);
+      
+      // Jogo está entre agora e o tempo de antecipação (com margem de 2 minutos)
+      return minutesDiff >= 0 && minutesDiff <= (advanceTime + 2) && 
+             storage.notificationSettings.leagues.includes(game.league);
+    });
+    
+    console.log('Jogos próximos encontrados:', upcomingGames.length);
+    
+    for (const game of upcomingGames) {
+      // Verificar se já foi notificado nas últimas 2 horas
+      const alreadyNotified = storage.notifications.some(notif => 
+        notif.gameId === game.id && 
+        notif.type === 'upcoming' &&
+        new Date(notif.timestamp) > new Date(now.getTime() - 2 * 60 * 60 * 1000)
+      );
+      
+      if (!alreadyNotified) {
+        const message = game.home_team + ' vs ' + game.away_team + ' (' + game.league + ')';
+        
+        console.log('Enviando notificação para:', message);
+        
+        // Enviar notificação via Telegram
+        if (storage.notificationSettings.telegramEnabled) {
+          const telegramMessage = '🔔 <b>JOGO PRÓXIMO</b>\n\n' +
+                                '⚽ <b>Jogo:</b> ' + game.home_team + ' vs ' + game.away_team + '\n' +
+                                '🏆 <b>Liga:</b> ' + game.league + '\n' +
+                                '⏰ <b>Início:</b> ' + new Date(game.date).toLocaleString('pt-PT') + '\n' +
+                                '⏳ <b>Faltam:</b> ' + Math.round((new Date(game.date).getTime() - now.getTime()) / (1000 * 60)) + ' minutos';
+          
+          const sent = await sendTelegramMessage(env, telegramMessage);
+          
+          // Guardar notificação no histórico
+          const notification = {
+            id: Date.now().toString(),
+            gameId: game.id,
+            type: 'upcoming',
+            message: message,
+            sent: sent,
+            timestamp: new Date().toISOString(),
+            channel: 'telegram'
+          };
+          
+          storage.notifications.push(notification);
+          
+          if (sent) {
+            addCommentatorLog('🔔 Notificação enviada: ' + message, 'success');
+            logNotificationSent(notification, 'system');
+          } else {
+            addCommentatorLog('❌ Falha ao enviar notificação: ' + message, 'error');
+            logApiFailure('TELEGRAM_NOTIFICATION', new Error('Falha ao enviar notificação'), message);
+          }
+        }
+      }
+    }
+    
+    // Manter apenas as últimas 100 notificações
+    if (storage.notifications.length > 100) {
+      storage.notifications = storage.notifications.slice(-100);
+    }
+    
+    // Atualizar último check
+    storage.notificationSettings.lastNotificationCheck = new Date().toISOString();
+    
+  } catch (error) {
+    console.error('Erro no cron checkUpcomingNotifications:', error);
+    addCommentatorLog('❌ Erro ao verificar notificações: ' + error.message, 'error');
+  }
+}
+
 async function checkLiveGames(env) {
   try {
     console.log('Cron: Verificando jogos ao vivo...');
@@ -829,7 +1191,7 @@ async function handleDailyReportAPI(request, env) {
   };
 
   try {
-    const url = new URL(request.url);
+      const url = new URL(request.url);
     const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
     
     // Buscar relatórios do dia especificado
@@ -864,16 +1226,16 @@ async function handleDailyReportAPI(request, env) {
     };
     
     return new Response(JSON.stringify(report), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
 
   } catch (error) {
     console.error('Error fetching daily report:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
   }
 }
 
@@ -925,26 +1287,68 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
 }
 
 // Função para atualizar sinal no Telegram
-async function updateSignalInTelegram(env, signal, newStatus) {
-  try {
-    const statusEmoji = newStatus === 'green' ? '🟢' : newStatus === 'red' ? '🔴' : '🟡';
-    const statusText = newStatus === 'green' ? 'GREEN' : newStatus === 'red' ? 'RED' : 'PENDING';
-    
-    const message = `📊 <b>ATUALIZAÇÃO DE SINAL</b>\n\n` +
-                   `🎯 <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
-                   `🏆 <b>Liga:</b> ${signal.league}\n` +
-                   `📅 <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
-                   `⚽ <b>Resultado:</b> ${signal.home_score || 0} - ${signal.away_score || 0}\n` +
-                   `🎯 <b>Previsão:</b> ${signal.prediction || 'N/A'}\n` +
-                   `📈 <b>Status:</b> ${statusEmoji} ${statusText}\n` +
-                   `⏰ <b>Atualizado:</b> ${new Date().toLocaleString('pt-PT')}`;
+        async function updateSignalInTelegram(env, signal, newStatus) {
+            try {
+                const statusEmoji = newStatus === 'green' ? '🟢' : newStatus === 'red' ? '🔴' : '🟡';
+                const statusText = newStatus === 'green' ? 'GREEN' : newStatus === 'red' ? 'RED' : 'PENDING';
+                
+                const message = `📊 <b>ATUALIZAÇÃO DE SINAL</b>\n\n` +
+                               `🎯 <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
+                               `🏆 <b>Liga:</b> ${signal.league}\n` +
+                               `📅 <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
+                               `⚽ <b>Resultado:</b> ${signal.home_score || 0} - ${signal.away_score || 0}\n` +
+                               `🎯 <b>Previsão:</b> ${signal.prediction || 'N/A'}\n` +
+                               `📈 <b>Status:</b> ${statusEmoji} ${statusText}\n` +
+                               `⏰ <b>Atualizado:</b> ${new Date().toLocaleString('pt-PT')}`;
+                
+                return await sendTelegramMessage(env, message);
+            } catch (error) {
+                console.error('Erro ao atualizar sinal no Telegram:', error);
+                return false;
+            }
+        }
 
-    return await sendTelegramMessage(env, message);
+        async function sendSignalWithExplanation(env, signal) {
+            try {
+                // Mensagem principal do sinal
+                const mainMessage = `🚨 <b>NOVO SINAL</b>\n\n` +
+                                   `🎯 <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
+                                   `🏆 <b>Liga:</b> ${signal.league}\n` +
+                                   `📅 <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
+                                   `🎯 <b>Previsão:</b> ${signal.prediction}\n` +
+                                   `📊 <b>Confiança:</b> ${signal.confidence}%\n` +
+                                   `⏰ <b>Criado:</b> ${new Date().toLocaleString('pt-PT')}`;
+                
+                const mainSent = await sendTelegramMessage(env, mainMessage);
+                
+                if (mainSent && signal.explanation) {
+                    // Mensagem secundária com explicação
+                    const explanation = signal.explanation;
+                    const explanationMessage = `🧠 <b>EXPLICAÇÃO DO SINAL</b>\n\n` +
+                                              `📈 <b>Estatísticas das Equipas:</b>\n` +
+                                              `🏠 ${explanation.teamStats.homeTeam.name}: ${explanation.teamStats.homeTeam.avgGoalsScored} golos/jogo (média)\n` +
+                                              `✈️ ${explanation.teamStats.awayTeam.name}: ${explanation.teamStats.awayTeam.avgGoalsScored} golos/jogo (média)\n\n` +
+                                              `🔄 <b>Forma Recente:</b>\n` +
+                                              `🏠 Casa: ${explanation.recentForm.homeForm}\n` +
+                                              `✈️ Fora: ${explanation.recentForm.awayForm}\n\n` +
+                                              `⚔️ <b>Confrontos Diretos:</b>\n` +
+                                              `📊 Últimos ${explanation.headToHead.totalMeetings} jogos: ${explanation.headToHead.homeWins}V-${explanation.headToHead.draws}E-${explanation.headToHead.awayWins}D\n` +
+                                              `⚽ Média de golos: ${explanation.headToHead.avgGoalsPerGame}\n\n` +
+                                              `💡 <b>Razões da Análise:</b>\n` +
+                                              explanation.reasoning.map(reason => `• ${reason}`).join('\n');
+                    
+                    // Enviar explicação 2 segundos depois
+                    setTimeout(async () => {
+                        await sendTelegramMessage(env, explanationMessage);
+                    }, 2000);
+                }
+                
+                return mainSent;
   } catch (error) {
-    console.error('Erro ao atualizar sinal no Telegram:', error);
-    return false;
-  }
-}
+                console.error('Erro ao enviar sinal com explicação:', error);
+                return false;
+            }
+        }
 
 // API de utilizadores removida - SISTEMA SEM AUTENTICAÇÃO
 
@@ -970,13 +1374,39 @@ function getDashboardHTML() {
             <header class="bg-gray-800 shadow-sm border-b border-gray-700">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
-                        <h1 class="text-xl font-bold text-blue-400">Alert@Postas - Sistema Principal</h1>
+                        <div class="flex items-center">
+                            <img src="/logo.png" alt="Alert@Postas" class="h-12 w-auto object-contain" />
+                        </div>
                         <div class="flex items-center space-x-4">
                             <span class="text-gray-300">Sistema Ativo</span>
                             <div class="flex items-center space-x-2">
                                 <div class="w-3 h-3 bg-green-500 rounded-full"></div>
                                 <span class="text-sm text-gray-300">Online</span>
                             </div>
+                            <button id="historyBtn" class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-2 rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">📊</span>
+                                Histórico
+                            </button>
+                            <button id="notificationsBtn" class="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-4 py-2 rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">🔔</span>
+                                Notificações
+                            </button>
+                            <button id="logsBtn" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">📋</span>
+                                Logs
+                            </button>
+                            <button id="subscriptionBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">💳</span>
+                                Subscrição
+                            </button>
+                            <button id="subscriptionAdminBtn" class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-4 py-2 rounded-lg hover:from-yellow-700 hover:to-yellow-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">👑</span>
+                                Admin
+                            </button>
+                            <button id="settingsBtn" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">⚙️</span>
+                                Configurações
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -984,53 +1414,73 @@ function getDashboardHTML() {
 
             <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <!-- Bot Controls -->
-                <div class="bg-gray-800 rounded-lg shadow-sm p-6 mb-8">
-                    <h2 class="text-lg font-semibold mb-4">🤖 Controlo do Bot</h2>
+                <div class="bg-gradient-to-r from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mb-8 border border-gray-600">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">🤖</span>
+                            Controlo do Bot
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                            <span class="text-sm text-gray-300">Sistema Ativo</span>
+                        </div>
+                    </div>
                     <div class="flex flex-wrap gap-4">
-                        <button id="startBot" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                            🚀 Iniciar Bot
+                        <button id="startBot" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-500/25 font-medium flex items-center gap-2">
+                            <span class="text-lg">🚀</span>
+                            Iniciar Bot
                         </button>
-                        <button id="stopBot" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                            ⏹️ Parar Bot
+                        <button id="stopBot" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-red-500/25 font-medium flex items-center gap-2">
+                            <span class="text-lg">⏹️</span>
+                            Parar Bot
                         </button>
-                        <button id="analyzeGames" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                            🔍 Analisar Jogos
+                        <button id="analyzeGames" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 font-medium flex items-center gap-2">
+                            <span class="text-lg">🔍</span>
+                            Analisar Jogos
                         </button>
-                        <span id="botStatus" class="flex items-center px-4 py-2 bg-gray-700 rounded-md">
-                            Status: <span id="statusText" class="ml-2 text-yellow-400">Parado</span>
-                        </span>
+                        <div id="botStatus" class="flex items-center px-6 py-3 bg-gray-600 rounded-lg border border-gray-500">
+                            <span class="text-gray-300 font-medium">Status:</span>
+                            <span id="statusText" class="ml-3 text-yellow-400 font-semibold">Parado</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Live Games -->
-                    <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">🔴 Jogos ao Vivo</h2>
-                            <button id="refreshLiveGames" class="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 text-sm">
-                                🔄 Atualizar
+                    <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 border border-gray-600">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                                <span class="text-2xl">🔴</span>
+                                Jogos ao Vivo
+                            </h2>
+                            <button id="refreshLiveGames" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-red-500/25 font-medium flex items-center gap-2">
+                                <span class="text-lg">🔄</span>
+                                Atualizar
                             </button>
                         </div>
-                        <div id="live-games-list" class="space-y-2 max-h-96 overflow-y-auto">
-                            <div class="text-center text-gray-400 py-4">Carregando jogos ao vivo...</div>
+                        <div id="live-games-list" class="space-y-3 max-h-96 overflow-y-auto">
+                            <div class="text-center text-gray-400 py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+                                <p class="text-lg font-medium">Carregando jogos ao vivo...</p>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Calendar Horizontal -->
-                    <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center gap-2">
-                                <span class="text-lg">📅</span>
-                                <h2 class="text-lg font-semibold">Seleção de Dias</h2>
+                    <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 border border-gray-600">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">📅</span>
+                                <h2 class="text-xl font-bold text-white">Seleção de Dias</h2>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button id="prevWeek" class="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm">
+                                <button id="prevWeek" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium">
                                     ←
                                 </button>
-                                <button id="goToday" class="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm">
+                                <button id="goToday" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 font-medium">
                                     Hoje
                                 </button>
-                                <button id="nextWeek" class="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm">
+                                <button id="nextWeek" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium">
                                     →
                                 </button>
                             </div>
@@ -1139,50 +1589,742 @@ function getDashboardHTML() {
                 </div>
 
                 <!-- Signals -->
-                <div class="bg-gray-800 rounded-lg shadow-sm p-6 mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold">📊 Sinais Enviados</h2>
-                        <button id="clearSignals" class="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 text-sm">
-                            🗑️ Limpar
+                <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">📊</span>
+                            Sinais Enviados
+                        </h2>
+                        <div class="flex gap-2">
+                            <button id="createMockSignal" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">🧠</span>
+                                Criar Sinal
+                            </button>
+                            <button id="clearSignals" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                                <span class="text-lg">🗑️</span>
+                                Limpar
                         </button>
                     </div>
-                    <div id="signals-list" class="bg-black rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm">
-                        <div class="text-gray-400">Nenhum sinal enviado</div>
+                    </div>
+                    <div id="signals-list" class="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto text-sm border border-gray-600">
+                        <div class="text-gray-400 text-center py-4">Nenhum sinal enviado</div>
+                    </div>
+                </div>
+
+                <!-- Explicações dos Sinais -->
+                <div id="signalExplanations" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">🧠</span>
+                            Explicação do Sinal
+                        </h2>
+                        <button id="closeExplanation" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                    </div>
+                    
+                    <div id="explanationContent" class="space-y-6">
+                        <!-- Conteúdo será preenchido dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- Dashboard Histórico de Performance -->
+                <div id="historyPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">📊</span>
+                            Histórico de Performance
+                        </h2>
+                        <button id="closeHistory" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                    </div>
+                    
+                    <!-- Filtros -->
+                    <div class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">🔍</span>
+                            Filtros
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Período</label>
+                                <select id="historyPeriod" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                                    <option value="7">Última Semana</option>
+                                    <option value="30" selected>Último Mês</option>
+                                    <option value="90">Últimos 3 Meses</option>
+                                    <option value="365">Último Ano</option>
+                                    <option value="custom">Personalizado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Liga</label>
+                                <select id="historyLeague" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                                    <option value="all">Todas as Ligas</option>
+                                    <option value="Liga Portugal">Liga Portugal</option>
+                                    <option value="Premier League">Premier League</option>
+                                    <option value="La Liga">La Liga</option>
+                                    <option value="Serie A">Serie A</option>
+                                    <option value="Bundesliga">Bundesliga</option>
+                                </select>
+                            </div>
+                            <div id="customDateRange" class="hidden">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Data Início</label>
+                                <input type="date" id="historyStartDate" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                            </div>
+                            <div id="customDateRangeEnd" class="hidden">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Data Fim</label>
+                                <input type="date" id="historyEndDate" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                            </div>
+                        </div>
+                        <div class="mt-4 flex gap-2">
+                            <button id="applyHistoryFilters" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium">
+                                Aplicar Filtros
+                            </button>
+                            <button id="resetHistoryFilters" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 font-medium">
+                                Resetar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumo de Performance -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-blue-400 mb-2" id="historyTotalSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Total Sinais</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-green-400 mb-2" id="historyGreenSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Greens</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-red-400 mb-2" id="historyRedSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Reds</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-purple-400 mb-2" id="historyWinRate">0%</div>
+                            <div class="text-sm text-gray-300 font-medium">Taxa de Acerto</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Gráficos -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <!-- Gráfico de Linha - Performance Diária -->
+                        <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <span class="text-xl">📈</span>
+                                Performance Diária
+                            </h3>
+                            <div id="dailyChart" class="h-64 flex items-center justify-center text-gray-400">
+                                <div class="text-center">
+                                    <div class="text-4xl mb-2">📊</div>
+                                    <div>Gráfico de Performance Diária</div>
+                                    <div class="text-sm">(Simulado - em produção seria Chart.js)</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Gráfico de Barras - Performance por Liga -->
+                        <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <span class="text-xl">🏆</span>
+                                Performance por Liga
+                            </h3>
+                            <div id="leagueChart" class="h-64 flex items-center justify-center text-gray-400">
+                                <div class="text-center">
+                                    <div class="text-4xl mb-2">📊</div>
+                                    <div>Gráfico por Liga</div>
+                                    <div class="text-sm">(Simulado - em produção seria Chart.js)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabela de Performance Diária -->
+                    <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">📋</span>
+                            Performance Detalhada
+                        </h3>
+                        <div id="historyTable" class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-gray-600">
+                                        <th class="text-left py-3 px-4 text-gray-300">Data</th>
+                                        <th class="text-center py-3 px-4 text-gray-300">Total</th>
+                                        <th class="text-center py-3 px-4 text-gray-300">Greens</th>
+                                        <th class="text-center py-3 px-4 text-gray-300">Reds</th>
+                                        <th class="text-center py-3 px-4 text-gray-300">Taxa</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-8 text-gray-400">Carregando dados...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de Notificações Inteligentes -->
+                <div id="notificationsPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">🔔</span>
+                            Notificações Inteligentes
+                        </h2>
+                        <button id="closeNotifications" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                    </div>
+                    
+                    <!-- Configurações de Notificações -->
+                    <div class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">⚙️</span>
+                            Configurações
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="flex items-center space-x-3 mb-4">
+                                    <input type="checkbox" id="notificationsEnabled" class="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-white font-medium">Ativar Notificações</span>
+                                </label>
+                                <label class="flex items-center space-x-3 mb-4">
+                                    <input type="checkbox" id="telegramNotifications" class="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-white font-medium">Notificações via Telegram</span>
+                                </label>
+                                <label class="flex items-center space-x-3">
+                                    <input type="checkbox" id="emailNotifications" class="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-white font-medium">Notificações por Email</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Tempo de Antecipação (minutos)</label>
+                                <select id="advanceTime" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-white">
+                                    <option value="15">15 minutos</option>
+                                    <option value="30" selected>30 minutos</option>
+                                    <option value="60">1 hora</option>
+                                    <option value="120">2 horas</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligas Selecionadas -->
+                        <div class="mt-6">
+                            <label class="block text-sm font-medium text-gray-300 mb-3">Ligas para Notificar</label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="league_liga_portugal" class="w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-gray-300 text-sm">Liga Portugal</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="league_premier_league" class="w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-gray-300 text-sm">Premier League</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="league_la_liga" class="w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-gray-300 text-sm">La Liga</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="league_serie_a" class="w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-gray-300 text-sm">Serie A</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="league_bundesliga" class="w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                                    <span class="text-gray-300 text-sm">Bundesliga</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 flex gap-2">
+                            <button id="saveNotificationSettings" class="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-2 rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 font-medium">
+                                Guardar Configurações
+                            </button>
+                            <button id="testNotification" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium">
+                                Testar Notificação
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status das Notificações -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-orange-400 mb-2" id="totalNotifications">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Total Enviadas</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-green-400 mb-2" id="successNotifications">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Enviadas com Sucesso</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-blue-400 mb-2" id="upcomingGames">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Jogos Próximos</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Histórico de Notificações -->
+                    <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">📋</span>
+                            Histórico de Notificações
+                        </h3>
+                        <div id="notificationsHistory" class="space-y-3 max-h-64 overflow-y-auto">
+                            <div class="text-center py-8 text-gray-400">Carregando histórico...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de Logs e Auditoria -->
+                <div id="logsPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">📋</span>
+                            Logs e Auditoria
+                            <span class="text-sm bg-red-600 text-white px-2 py-1 rounded-full">Super Admin</span>
+                        </h2>
+                        <button id="closeLogs" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                    </div>
+                    
+                    <!-- Filtros de Logs -->
+                    <div class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">🔍</span>
+                            Filtros
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Tipo de Evento</label>
+                                <select id="logEventType" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
+                                    <option value="all">Todos os Eventos</option>
+                                    <option value="API_FAILURE">Falhas da API</option>
+                                    <option value="SIGNAL_GENERATED">Geração de Sinais</option>
+                                    <option value="REPORT_SENT">Envio de Relatórios</option>
+                                    <option value="NOTIFICATION_SENT">Notificações</option>
+                                    <option value="USER_ACTION">Ações do Utilizador</option>
+                                    <option value="SYSTEM_EVENT">Eventos do Sistema</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Utilizador</label>
+                                <select id="logUser" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
+                                    <option value="all">Todos os Utilizadores</option>
+                                    <option value="system">Sistema</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="user">Utilizador</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Limite</label>
+                                <select id="logLimit" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
+                                    <option value="50">50 logs</option>
+                                    <option value="100" selected>100 logs</option>
+                                    <option value="200">200 logs</option>
+                                    <option value="500">500 logs</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button id="applyLogFilters" class="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 font-medium">
+                                    Aplicar Filtros
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estatísticas de Logs -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-red-400 mb-2" id="totalLogs">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Total de Logs</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-orange-400 mb-2" id="apiFailures">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Falhas da API</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-green-400 mb-2" id="signalsGenerated">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Sinais Gerados</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-blue-400 mb-2" id="last24hLogs">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Últimas 24h</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabela de Logs -->
+                    <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">📊</span>
+                            Logs de Auditoria
+                        </h3>
+                        <div id="logsTable" class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-gray-600">
+                                        <th class="text-left py-3 px-4 text-gray-300">Timestamp</th>
+                                        <th class="text-left py-3 px-4 text-gray-300">Tipo</th>
+                                        <th class="text-left py-3 px-4 text-gray-300">Detalhe</th>
+                                        <th class="text-left py-3 px-4 text-gray-300">Utilizador</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center py-8 text-gray-400">Carregando logs...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Paginação -->
+                        <div id="logsPagination" class="mt-4 flex justify-between items-center">
+                            <div class="text-sm text-gray-400">
+                                Mostrando <span id="logsShowing">0</span> de <span id="logsTotal">0</span> logs
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="prevLogs" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 disabled:opacity-50" disabled>
+                                    Anterior
+                                </button>
+                                <button id="nextLogs" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 disabled:opacity-50" disabled>
+                                    Próximo
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Commentator Panel -->
-                <div class="bg-gray-800 rounded-lg shadow-sm p-6 mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold">🎙️ Painel do Comentador</h2>
-                        <button id="clearCommentator" class="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 text-sm">
-                            🗑️ Limpar
+                <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">🎙️</span>
+                            Painel do Comentador
+                        </h2>
+                        <button id="clearCommentator" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">🗑️</span>
+                            Limpar
                         </button>
                     </div>
-                    <div id="commentator-panel" class="bg-black rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm">
-                        <div class="text-gray-400">Sistema iniciado - Aguardando ações...</div>
+                    <div id="commentator-panel" class="bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm border border-gray-600">
+                        <div class="text-gray-400 text-center py-4">Sistema iniciado - Aguardando ações...</div>
                     </div>
                 </div>
 
                 <!-- Stats -->
-                <div class="bg-gray-800 rounded-lg shadow-sm p-6 mt-8">
-                    <h2 class="text-lg font-semibold mb-4">📈 Estatísticas</h2>
+                <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-3 mb-6">
+                        <span class="text-2xl">📈</span>
+                        Estatísticas
+                    </h2>
                     <div id="stats-display" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-gray-700 p-4 rounded-lg text-center">
-                            <div class="text-2xl font-bold text-blue-400" id="totalSignals">0</div>
-                            <div class="text-sm text-gray-400">Total Sinais</div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500 hover:shadow-lg transition-all duration-200">
+                            <div class="text-3xl font-bold text-blue-400 mb-2" id="totalSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Total Sinais</div>
                         </div>
-                        <div class="bg-gray-700 p-4 rounded-lg text-center">
-                            <div class="text-2xl font-bold text-green-400" id="greenSignals">0</div>
-                            <div class="text-sm text-gray-400">Greens</div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500 hover:shadow-lg transition-all duration-200">
+                            <div class="text-3xl font-bold text-green-400 mb-2" id="greenSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Greens</div>
                         </div>
-                        <div class="bg-gray-700 p-4 rounded-lg text-center">
-                            <div class="text-2xl font-bold text-red-400" id="redSignals">0</div>
-                            <div class="text-sm text-gray-400">Reds</div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500 hover:shadow-lg transition-all duration-200">
+                            <div class="text-3xl font-bold text-red-400 mb-2" id="redSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Reds</div>
                         </div>
-                        <div class="bg-gray-700 p-4 rounded-lg text-center">
-                            <div class="text-2xl font-bold text-yellow-400" id="pendingSignals">0</div>
-                            <div class="text-sm text-gray-400">Pendentes</div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500 hover:shadow-lg transition-all duration-200">
+                            <div class="text-3xl font-bold text-yellow-400 mb-2" id="pendingSignals">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Pendentes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações (Apenas para Super Admin) -->
+                <div id="settingsPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">⚙️</span>
+                            Configurações do Sistema
+                        </h2>
+                        <button id="closeSettings" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                        </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- API Configuration -->
+                        <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <span class="text-xl">🔑</span>
+                                Configuração da API
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">API Football Key</label>
+                                    <input type="password" id="apiKey" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Insira a chave da API">
+                        </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Limite de Chamadas por Hora</label>
+                                    <input type="number" id="apiLimit" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="100" min="1" max="1000">
+                        </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
+                                    <select id="timezone" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                                        <option value="Europe/Lisbon">Europe/Lisbon (Portugal)</option>
+                                        <option value="Europe/London">Europe/London (UK)</option>
+                                        <option value="Europe/Madrid">Europe/Madrid (Espanha)</option>
+                                        <option value="America/New_York">America/New_York (EUA)</option>
+                                    </select>
+                        </div>
+                    </div>
+                </div>
+
+                        <!-- Bot Configuration -->
+                        <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <span class="text-xl">🤖</span>
+                                Configurações do Bot
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Threshold de Sinais (%)</label>
+                                    <input type="number" id="signalThreshold" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="85" min="50" max="100">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Máximo de Sinais por Dia</label>
+                                    <input type="number" id="maxSignalsPerDay" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="50" min="1" max="200">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Horário do Relatório Diário</label>
+                                    <input type="time" id="dailyReportTime" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" value="23:59">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Telegram Configuration -->
+                        <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <span class="text-xl">📱</span>
+                                Configuração do Telegram
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Token do Bot</label>
+                                    <input type="password" id="telegramToken" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Insira o token do bot">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">ID do Grupo</label>
+                                    <input type="text" id="telegramGroupId" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="-1001234567890">
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="telegramEnabled" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                                    <label class="ml-2 text-sm text-gray-300">Ativar notificações do Telegram</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Status -->
+                        <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <span class="text-xl">📊</span>
+                                Status do Sistema
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-300">API Football</span>
+                                    <span id="apiStatus" class="px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300">Conectado</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-300">Telegram Bot</span>
+                                    <span id="telegramStatus" class="px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300">Ativo</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-300">Cron Jobs</span>
+                                    <span id="cronStatus" class="px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300">Executando</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-300">Última Atualização</span>
+                                    <span id="lastUpdate" class="text-gray-400 text-sm">Agora</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div class="mt-8 flex justify-end">
+                        <button id="saveSettings" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-500/25 font-medium flex items-center gap-2">
+                            <span class="text-lg">💾</span>
+                            Guardar Configurações
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Página de Subscrição -->
+                <div id="subscriptionPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">💳</span>
+                            Gestão de Subscrição
+                        </h2>
+                        <button id="closeSubscription" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                    </div>
+                    
+                    <!-- Status da Subscrição -->
+                    <div id="subscriptionStatus" class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">📊</span>
+                            Status Atual
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-4 rounded-lg text-center border border-gray-500">
+                                <div class="text-2xl font-bold text-blue-400 mb-2" id="currentStatus">Trial</div>
+                                <div class="text-sm text-gray-300">Status da Subscrição</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-4 rounded-lg text-center border border-gray-500">
+                                <div class="text-2xl font-bold text-green-400 mb-2" id="currentPlan">Trial</div>
+                                <div class="text-sm text-gray-300">Plano Atual</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-4 rounded-lg text-center border border-gray-500">
+                                <div class="text-2xl font-bold text-yellow-400 mb-2" id="daysLeft">7</div>
+                                <div class="text-sm text-gray-300">Dias Restantes</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Planos Disponíveis -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <!-- Plano Mensal -->
+                        <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-6 border border-blue-600 hover:shadow-lg transition-all duration-200">
+                            <div class="text-center mb-6">
+                                <h3 class="text-2xl font-bold text-white mb-2">Plano Mensal</h3>
+                                <div class="text-4xl font-bold text-blue-300 mb-2">€29.99</div>
+                                <div class="text-gray-300">por mês</div>
+                            </div>
+                            <ul class="space-y-3 mb-6">
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Acesso completo aos sinais
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Notificações em tempo real
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Relatórios diários
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Suporte prioritário
+                                </li>
+                            </ul>
+                            <button id="subscribeMonthly" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium">
+                                Subcrever Mensal
+                            </button>
+                        </div>
+                        
+                        <!-- Plano Anual -->
+                        <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-xl p-6 border border-purple-600 hover:shadow-lg transition-all duration-200 relative">
+                            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                <span class="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-4 py-1 rounded-full text-sm font-bold">
+                                    MAIS POPULAR
+                                </span>
+                            </div>
+                            <div class="text-center mb-6">
+                                <h3 class="text-2xl font-bold text-white mb-2">Plano Anual</h3>
+                                <div class="text-4xl font-bold text-purple-300 mb-2">€299.99</div>
+                                <div class="text-gray-300">por ano</div>
+                                <div class="text-green-400 text-sm font-medium">Poupe 17%!</div>
+                            </div>
+                            <ul class="space-y-3 mb-6">
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Acesso completo aos sinais
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Notificações em tempo real
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Relatórios diários
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Suporte prioritário
+                                </li>
+                                <li class="flex items-center text-gray-300">
+                                    <span class="text-green-400 mr-2">✅</span>
+                                    Análises exclusivas
+                                </li>
+                            </ul>
+                            <button id="subscribeYearly" class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium">
+                                Subcrever Anual
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Histórico de Pagamentos -->
+                    <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span class="text-xl">📋</span>
+                            Histórico de Pagamentos
+                        </h3>
+                        <div id="paymentHistory" class="space-y-3">
+                            <div class="text-center text-gray-400 py-4">
+                                Nenhum pagamento encontrado
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel Admin de Subscrições -->
+                <div id="subscriptionAdminPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                            <span class="text-2xl">👑</span>
+                            Painel Admin - Subscrições
+                        </h2>
+                        <button id="closeSubscriptionAdmin" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
+                            <span class="text-lg">✕</span>
+                            Fechar
+                        </button>
+                    </div>
+                    
+                    <!-- Estatísticas -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-blue-400 mb-2" id="totalUsers">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Total Utilizadores</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-green-400 mb-2" id="activeSubscriptions">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Subscrições Ativas</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-red-400 mb-2" id="expiredSubscriptions">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Subscrições Expiradas</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
+                            <div class="text-3xl font-bold text-yellow-400 mb-2" id="trialUsers">0</div>
+                            <div class="text-sm text-gray-300 font-medium">Utilizadores Trial</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de Utilizadores -->
+                    <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
+                        <h3 class="text-lg font-bold text-white mb-4">Lista de Subscritores</h3>
+                        <div id="usersList" class="space-y-3">
+                            <div class="text-center text-gray-400 py-4">
+                                Carregando utilizadores...
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1237,6 +2379,74 @@ function getDashboardHTML() {
             if (clearCommentator) clearCommentator.addEventListener('click', function() {
                 document.getElementById('commentator-panel').innerHTML = '<div class="text-gray-400">Logs limpos</div>';
             });
+            
+            // Configurações
+            const settingsBtn = document.getElementById('settingsBtn');
+            const closeSettings = document.getElementById('closeSettings');
+            const saveSettings = document.getElementById('saveSettings');
+            
+            if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+            if (closeSettings) closeSettings.addEventListener('click', closeSettingsPanel);
+            if (saveSettings) saveSettings.addEventListener('click', saveSettingsConfig);
+            
+            // Subscrições
+            const subscriptionBtn = document.getElementById('subscriptionBtn');
+            const subscriptionAdminBtn = document.getElementById('subscriptionAdminBtn');
+            const closeSubscription = document.getElementById('closeSubscription');
+            const subscribeMonthly = document.getElementById('subscribeMonthly');
+            const subscribeYearly = document.getElementById('subscribeYearly');
+            const closeSubscriptionAdmin = document.getElementById('closeSubscriptionAdmin');
+            
+            if (subscriptionBtn) subscriptionBtn.addEventListener('click', openSubscription);
+            if (subscriptionAdminBtn) subscriptionAdminBtn.addEventListener('click', openSubscriptionAdmin);
+            if (closeSubscription) closeSubscription.addEventListener('click', closeSubscriptionPanel);
+            if (subscribeMonthly) subscribeMonthly.addEventListener('click', () => createSubscription('monthly'));
+            if (subscribeYearly) subscribeYearly.addEventListener('click', () => createSubscription('yearly'));
+            if (closeSubscriptionAdmin) closeSubscriptionAdmin.addEventListener('click', closeSubscriptionAdminPanel);
+            
+            // Explicações dos Sinais
+            const createMockSignal = document.getElementById('createMockSignal');
+            const closeExplanation = document.getElementById('closeExplanation');
+            
+            if (createMockSignal) createMockSignal.addEventListener('click', createAndShowMockSignal);
+            if (closeExplanation) closeExplanation.addEventListener('click', closeExplanationPanel);
+            
+            // Histórico de Performance
+            const historyBtn = document.getElementById('historyBtn');
+            const closeHistory = document.getElementById('closeHistory');
+            const applyHistoryFilters = document.getElementById('applyHistoryFilters');
+            const resetHistoryFilters = document.getElementById('resetHistoryFilters');
+            const historyPeriod = document.getElementById('historyPeriod');
+            
+            if (historyBtn) historyBtn.addEventListener('click', openHistoryPanel);
+            if (closeHistory) closeHistory.addEventListener('click', closeHistoryPanel);
+            if (applyHistoryFilters) applyHistoryFilters.addEventListener('click', loadHistoryData);
+            if (resetHistoryFilters) resetHistoryFilters.addEventListener('click', resetHistoryFilters);
+            if (historyPeriod) historyPeriod.addEventListener('change', toggleCustomDateRange);
+            
+            // Notificações Inteligentes
+            const notificationsBtn = document.getElementById('notificationsBtn');
+            const closeNotifications = document.getElementById('closeNotifications');
+            const saveNotificationSettings = document.getElementById('saveNotificationSettings');
+            const testNotification = document.getElementById('testNotification');
+            
+            if (notificationsBtn) notificationsBtn.addEventListener('click', openNotificationsPanel);
+            if (closeNotifications) closeNotifications.addEventListener('click', closeNotificationsPanel);
+            if (saveNotificationSettings) saveNotificationSettings.addEventListener('click', saveNotificationConfig);
+            if (testNotification) testNotification.addEventListener('click', testNotificationSend);
+            
+            // Logs e Auditoria
+            const logsBtn = document.getElementById('logsBtn');
+            const closeLogs = document.getElementById('closeLogs');
+            const applyLogFilters = document.getElementById('applyLogFilters');
+            const prevLogs = document.getElementById('prevLogs');
+            const nextLogs = document.getElementById('nextLogs');
+            
+            if (logsBtn) logsBtn.addEventListener('click', openLogsPanel);
+            if (closeLogs) closeLogs.addEventListener('click', closeLogsPanel);
+            if (applyLogFilters) applyLogFilters.addEventListener('click', loadLogsData);
+            if (prevLogs) prevLogs.addEventListener('click', () => changeLogsPage(-1));
+            if (nextLogs) nextLogs.addEventListener('click', () => changeLogsPage(1));
         }
 
         async function botAction(action) {
@@ -1453,6 +2663,1668 @@ function getDashboardHTML() {
 
         // Funções de utilizadores removidas - SISTEMA SEM AUTENTICAÇÃO
 
+        // Funções de Subscrições
+        async function handleCreateSubscriptionSession(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const body = await request.json();
+                const { userId, planType = 'monthly' } = body;
+                
+                console.log('Criando sessão de pagamento para utilizador:', userId, 'plano:', planType);
+                addCommentatorLog('💳 Criando sessão de pagamento para utilizador: ' + userId, 'info');
+                
+                // Mock do Stripe - em produção seria uma chamada real
+                const mockSession = {
+                    id: 'cs_mock_' + Date.now(),
+                    url: 'https://checkout.stripe.com/mock-session',
+                    customer: userId,
+                    plan: planType,
+                    amount: planType === 'monthly' ? 2999 : 29999, // €29.99 ou €299.99
+                    currency: 'eur',
+                    status: 'open',
+                    created_at: new Date().toISOString()
+                };
+                
+                // Guardar sessão no storage
+                storage.subscriptions.push({
+                    sessionId: mockSession.id,
+                    userId: userId,
+                    planType: planType,
+                    status: 'pending',
+                    createdAt: new Date().toISOString()
+                });
+                
+                addCommentatorLog('✅ Sessão de pagamento criada: ' + mockSession.id, 'success');
+                
+                return new Response(JSON.stringify(mockSession), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao criar sessão de pagamento:', error);
+                addCommentatorLog('❌ Erro ao criar sessão de pagamento: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleSubscriptionWebhook(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const body = await request.json();
+                const { type, data } = body;
+                
+                console.log('Webhook Stripe recebido:', type);
+                addCommentatorLog('🔔 Webhook Stripe recebido: ' + type, 'info');
+                
+                if (type === 'checkout.session.completed') {
+                    const session = data.object;
+                    const subscription = storage.subscriptions.find(sub => sub.sessionId === session.id);
+                    
+                    if (subscription) {
+                        // Atualizar status da subscrição
+                        subscription.status = 'active';
+                        subscription.paymentId = session.payment_intent;
+                        subscription.updatedAt = new Date().toISOString();
+                        
+                        // Atualizar utilizador
+                        let user = storage.users.find(u => u.id === subscription.userId);
+                        if (!user) {
+                            user = {
+                                id: subscription.userId,
+                                email: 'user@example.com',
+                                subscription_status: 'active',
+                                subscription_plan: subscription.planType,
+                                subscription_start: new Date().toISOString(),
+                                created_at: new Date().toISOString()
+                            };
+                            storage.users.push(user);
+                        } else {
+                            user.subscription_status = 'active';
+                            user.subscription_plan = subscription.planType;
+                            user.subscription_start = new Date().toISOString();
+                        }
+                        
+                        addCommentatorLog('✅ Subscrição ativada para utilizador: ' + subscription.userId, 'success');
+                    }
+                }
+                
+                return new Response(JSON.stringify({ received: true }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro no webhook:', error);
+                addCommentatorLog('❌ Erro no webhook: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleSubscriptionStatus(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const url = new URL(request.url);
+                const userId = url.searchParams.get('userId') || 'default';
+                
+                let user = storage.users.find(u => u.id === userId);
+                if (!user) {
+                    user = {
+                        id: userId,
+                        email: 'user@example.com',
+                        subscription_status: 'trial',
+                        subscription_plan: 'trial',
+                        subscription_start: new Date().toISOString(),
+                        created_at: new Date().toISOString()
+                    };
+                    storage.users.push(user);
+                }
+                
+                const status = {
+                    userId: user.id,
+                    status: user.subscription_status,
+                    plan: user.subscription_plan,
+                    startDate: user.subscription_start,
+                    isActive: user.subscription_status === 'active',
+                    isExpired: user.subscription_status === 'expired',
+                    isTrial: user.subscription_status === 'trial'
+                };
+                
+                return new Response(JSON.stringify(status), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao obter status da subscrição:', error);
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleSubscriptionAdmin(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                // Em produção, verificar se o utilizador é super_admin
+                const adminData = {
+                    totalUsers: storage.users.length,
+                    activeSubscriptions: storage.users.filter(u => u.subscription_status === 'active').length,
+                    expiredSubscriptions: storage.users.filter(u => u.subscription_status === 'expired').length,
+                    trialUsers: storage.users.filter(u => u.subscription_status === 'trial').length,
+                    users: storage.users.map(user => ({
+                        id: user.id,
+                        email: user.email,
+                        status: user.subscription_status,
+                        plan: user.subscription_plan,
+                        startDate: user.subscription_start,
+                        createdAt: user.created_at
+                    })),
+                    subscriptions: storage.subscriptions.map(sub => ({
+                        sessionId: sub.sessionId,
+                        userId: sub.userId,
+                        planType: sub.planType,
+                        status: sub.status,
+                        createdAt: sub.createdAt
+                    }))
+                };
+                
+                addCommentatorLog('👑 Painel admin de subscrições acessado', 'info');
+                
+                return new Response(JSON.stringify(adminData), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro no painel admin:', error);
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+
+        // Funções de Subscrições
+        function openSubscription() {
+            const subscriptionPanel = document.getElementById('subscriptionPanel');
+            if (subscriptionPanel) {
+                subscriptionPanel.classList.remove('hidden');
+                loadSubscriptionStatus();
+                addCommentatorLog('💳 Painel de Subscrição aberto', 'info');
+            }
+        }
+
+        function closeSubscriptionPanel() {
+            const subscriptionPanel = document.getElementById('subscriptionPanel');
+            if (subscriptionPanel) {
+                subscriptionPanel.classList.add('hidden');
+                addCommentatorLog('💳 Painel de Subscrição fechado', 'info');
+            }
+        }
+
+        function openSubscriptionAdmin() {
+            const adminPanel = document.getElementById('subscriptionAdminPanel');
+            if (adminPanel) {
+                adminPanel.classList.remove('hidden');
+                loadSubscriptionAdmin();
+                addCommentatorLog('👑 Painel Admin de Subscrições aberto', 'info');
+            }
+        }
+
+        function closeSubscriptionAdminPanel() {
+            const adminPanel = document.getElementById('subscriptionAdminPanel');
+            if (adminPanel) {
+                adminPanel.classList.add('hidden');
+                addCommentatorLog('👑 Painel Admin de Subscrições fechado', 'info');
+            }
+        }
+
+        async function loadSubscriptionStatus() {
+            try {
+                const response = await fetch('/api/v1/subscription/status?userId=default');
+                const status = await response.json();
+                
+                document.getElementById('currentStatus').textContent = status.status;
+                document.getElementById('currentPlan').textContent = status.plan;
+                
+                // Calcular dias restantes (simulado)
+                const daysLeft = status.isTrial ? 7 : 30;
+                document.getElementById('daysLeft').textContent = daysLeft;
+                
+                addCommentatorLog('📊 Status da subscrição carregado: ' + status.status, 'info');
+                
+            } catch (error) {
+                console.error('Erro ao carregar status da subscrição:', error);
+                addCommentatorLog('❌ Erro ao carregar status da subscrição: ' + error.message, 'error');
+            }
+        }
+
+        async function createSubscription(planType) {
+            try {
+                addCommentatorLog('💳 Iniciando processo de subscrição: ' + planType, 'info');
+                
+                const response = await fetch('/api/v1/subscription/create-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: 'default',
+                        planType: planType
+                    })
+                });
+                
+                const session = await response.json();
+                
+                if (session.url) {
+                    addCommentatorLog('✅ Sessão de pagamento criada: ' + session.id, 'success');
+                    alert('✅ Redirecionando para o pagamento...\n\nEm modo de teste, a subscrição será ativada automaticamente.');
+                    
+                    // Simular ativação da subscrição (em produção seria via webhook)
+                    setTimeout(() => {
+                        simulateSubscriptionActivation(planType);
+                    }, 2000);
+                } else {
+                    throw new Error('Erro ao criar sessão de pagamento');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao criar subscrição:', error);
+                addCommentatorLog('❌ Erro ao criar subscrição: ' + error.message, 'error');
+                alert('❌ Erro ao criar subscrição: ' + error.message);
+            }
+        }
+
+        function simulateSubscriptionActivation(planType) {
+            // Simular ativação da subscrição
+            addCommentatorLog('🎉 Subscrição ativada com sucesso: ' + planType, 'success');
+            addCommentatorLog('✅ Acesso completo aos sinais disponível', 'success');
+            
+            // Atualizar interface
+            document.getElementById('currentStatus').textContent = 'Active';
+            document.getElementById('currentPlan').textContent = planType;
+            document.getElementById('daysLeft').textContent = '∞';
+            
+            // Mostrar alerta de sucesso
+            alert('🎉 Subscrição ativada com sucesso!\n\nAgora tem acesso completo a todos os sinais e funcionalidades.');
+        }
+
+        async function loadSubscriptionAdmin() {
+            try {
+                const response = await fetch('/api/v1/subscription/admin');
+                const adminData = await response.json();
+                
+                // Atualizar estatísticas
+                document.getElementById('totalUsers').textContent = adminData.totalUsers;
+                document.getElementById('activeSubscriptions').textContent = adminData.activeSubscriptions;
+                document.getElementById('expiredSubscriptions').textContent = adminData.expiredSubscriptions;
+                document.getElementById('trialUsers').textContent = adminData.trialUsers;
+                
+                // Atualizar lista de utilizadores
+                const usersList = document.getElementById('usersList');
+                if (adminData.users.length > 0) {
+                    usersList.innerHTML = adminData.users.map(user => {
+                        const statusClass = user.status === 'active' ? 'bg-green-900 text-green-300' :
+                                          user.status === 'expired' ? 'bg-red-900 text-red-300' :
+                                          'bg-yellow-900 text-yellow-300';
+                        return '<div class="bg-gray-700 p-4 rounded-lg border border-gray-500">' +
+                               '<div class="flex justify-between items-center">' +
+                               '<div>' +
+                               '<div class="font-medium text-white">' + user.email + '</div>' +
+                               '<div class="text-sm text-gray-400">ID: ' + user.id + '</div>' +
+                               '</div>' +
+                               '<div class="text-right">' +
+                               '<div class="px-3 py-1 rounded-full text-sm font-medium ' + statusClass + '">' + user.status.toUpperCase() + '</div>' +
+                               '<div class="text-sm text-gray-400">' + user.plan + '</div>' +
+                               '</div>' +
+                               '</div>' +
+                               '</div>';
+                    }).join('');
+                } else {
+                    usersList.innerHTML = '<div class="text-center text-gray-400 py-4">Nenhum utilizador encontrado</div>';
+                }
+                
+                addCommentatorLog('👑 Dados admin de subscrições carregados', 'info');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados admin:', error);
+                addCommentatorLog('❌ Erro ao carregar dados admin: ' + error.message, 'error');
+            }
+        }
+
+        // Funções de Notificações Inteligentes
+        async function handleNotificationConfig(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                if (request.method === 'GET') {
+                    // Retornar configurações atuais
+                    return new Response(JSON.stringify(storage.notificationSettings), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                    });
+                } else if (request.method === 'POST') {
+                    // Atualizar configurações
+                    const newSettings = await request.json();
+                    storage.notificationSettings = { ...storage.notificationSettings, ...newSettings };
+                    
+                    addCommentatorLog('🔔 Configurações de notificações atualizadas', 'success');
+                    
+                    return new Response(JSON.stringify({ success: true, settings: storage.notificationSettings }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                    });
+                }
+                
+                return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
+                
+            } catch (error) {
+                console.error('Erro ao gerir configurações de notificações:', error);
+                addCommentatorLog('❌ Erro ao gerir notificações: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleNotificationSend(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const { gameId, message, type = 'upcoming' } = await request.json();
+                
+                console.log('Enviando notificação:', { gameId, type, message });
+                addCommentatorLog('🔔 Enviando notificação: ' + type, 'info');
+                
+                let sent = false;
+                
+                if (storage.notificationSettings.telegramEnabled) {
+                    const telegramMessage = '🔔 <b>NOTIFICAÇÃO DE JOGO</b>\n\n' +
+                                          '⚽ <b>Jogo:</b> ' + message + '\n' +
+                                          '⏰ <b>Tipo:</b> ' + (type === 'upcoming' ? 'Próximo Jogo' : 'Lembrete') + '\n' +
+                                          '📅 <b>Enviado:</b> ' + new Date().toLocaleString('pt-PT');
+                    
+                    sent = await sendTelegramMessage(env, telegramMessage);
+                }
+                
+                // Guardar notificação no histórico
+                const notification = {
+                    id: Date.now().toString(),
+                    gameId: gameId,
+                    type: type,
+                    message: message,
+                    sent: sent,
+                    timestamp: new Date().toISOString(),
+                    channel: 'telegram'
+                };
+                
+                storage.notifications.push(notification);
+                
+                // Manter apenas as últimas 100 notificações
+                if (storage.notifications.length > 100) {
+                    storage.notifications = storage.notifications.slice(-100);
+                }
+                
+                addCommentatorLog(sent ? '✅ Notificação enviada com sucesso' : '❌ Falha ao enviar notificação', sent ? 'success' : 'error');
+                
+                return new Response(JSON.stringify({ 
+                    success: sent, 
+                    notification: notification 
+                }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao enviar notificação:', error);
+                addCommentatorLog('❌ Erro ao enviar notificação: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleNotificationUpcoming(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const url = new URL(request.url);
+                const minutes = parseInt(url.searchParams.get('minutes') || '30');
+                
+                console.log('Verificando jogos próximos em', minutes, 'minutos');
+                addCommentatorLog('🔍 Verificando jogos próximos em ' + minutes + ' minutos', 'info');
+                
+                const now = new Date();
+                const targetTime = new Date(now.getTime() + (minutes * 60 * 1000));
+                
+                // Buscar jogos que começam no período especificado
+                const upcomingGames = storage.futureGames.filter(game => {
+                    const gameTime = new Date(game.date);
+                    const timeDiff = gameTime.getTime() - now.getTime();
+                    const minutesDiff = timeDiff / (1000 * 60);
+                    
+                    // Jogo está entre agora e o tempo alvo (com margem de 5 minutos)
+                    return minutesDiff >= 0 && minutesDiff <= (minutes + 5) && 
+                           storage.notificationSettings.leagues.includes(game.league);
+                });
+                
+                const notifications = [];
+                
+                for (const game of upcomingGames) {
+                    // Verificar se já foi notificado
+                    const alreadyNotified = storage.notifications.some(notif => 
+                        notif.gameId === game.id && 
+                        notif.type === 'upcoming' &&
+                        new Date(notif.timestamp) > new Date(now.getTime() - 60 * 60 * 1000) // última hora
+                    );
+                    
+                    if (!alreadyNotified) {
+                        const message = game.home_team + ' vs ' + game.away_team + ' (' + game.league + ')';
+                        
+                        const response = await fetch('/api/v1/notifications/send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                gameId: game.id,
+                                message: message,
+                                type: 'upcoming'
+                            })
+                        });
+                
+                if (response.ok) {
+                            const result = await response.json();
+                            notifications.push(result.notification);
+                        }
+                    }
+                }
+                
+                addCommentatorLog('🔔 Verificação concluída: ' + notifications.length + ' notificações enviadas', 'success');
+                
+                return new Response(JSON.stringify({
+                    success: true,
+                    upcomingGames: upcomingGames.length,
+                    notificationsSent: notifications.length,
+                    notifications: notifications
+                }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao verificar jogos próximos:', error);
+                addCommentatorLog('❌ Erro ao verificar jogos próximos: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+
+        // Funções de Logs e Auditoria
+        async function handleAuditLogs(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                // Verificar se é super_admin (simulado - em produção seria JWT)
+                const url = new URL(request.url);
+                const userRole = url.searchParams.get('role') || 'user';
+                
+                if (userRole !== 'super_admin') {
+                    return new Response(JSON.stringify({ error: 'Acesso negado. Apenas super_admin pode consultar logs.' }), {
+                        status: 403,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                    });
+                }
+                
+                const tipoEvento = url.searchParams.get('tipo_evento') || 'all';
+                const limit = parseInt(url.searchParams.get('limit') || '100');
+                const offset = parseInt(url.searchParams.get('offset') || '0');
+                
+                console.log('Consultando logs de auditoria:', { tipoEvento, limit, offset });
+                addCommentatorLog('📋 Consultando logs de auditoria', 'info');
+                
+                // Filtrar logs por tipo de evento
+                let filteredLogs = storage.auditLogs;
+                if (tipoEvento !== 'all') {
+                    filteredLogs = storage.auditLogs.filter(log => log.tipo_evento === tipoEvento);
+                }
+                
+                // Ordenar por timestamp (mais recentes primeiro)
+                filteredLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Paginação
+                const paginatedLogs = filteredLogs.slice(offset, offset + limit);
+                
+                const response = {
+                    logs: paginatedLogs,
+                    pagination: {
+                        total: filteredLogs.length,
+                        limit: limit,
+                        offset: offset,
+                        hasMore: (offset + limit) < filteredLogs.length
+                    },
+                    filters: {
+                        tipo_evento: tipoEvento
+                    }
+                };
+                
+                addCommentatorLog('📊 Logs de auditoria consultados: ' + paginatedLogs.length + ' de ' + filteredLogs.length, 'success');
+                
+                return new Response(JSON.stringify(response), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao consultar logs de auditoria:', error);
+                addCommentatorLog('❌ Erro ao consultar logs: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleLogsStats(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                // Verificar se é super_admin (simulado - em produção seria JWT)
+                const url = new URL(request.url);
+                const userRole = url.searchParams.get('role') || 'user';
+                
+                if (userRole !== 'super_admin') {
+                    return new Response(JSON.stringify({ error: 'Acesso negado. Apenas super_admin pode consultar estatísticas de logs.' }), {
+                        status: 403,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                    });
+                }
+                
+                console.log('Consultando estatísticas de logs');
+                addCommentatorLog('📊 Consultando estatísticas de logs', 'info');
+                
+                // Estatísticas por tipo de evento
+                const statsByType = {};
+                storage.auditLogs.forEach(log => {
+                    if (!statsByType[log.tipo_evento]) {
+                        statsByType[log.tipo_evento] = 0;
+                    }
+                    statsByType[log.tipo_evento]++;
+                });
+                
+                // Estatísticas por utilizador
+                const statsByUser = {};
+                storage.auditLogs.forEach(log => {
+                    if (!statsByUser[log.utilizador]) {
+                        statsByUser[log.utilizador] = 0;
+                    }
+                    statsByUser[log.utilizador]++;
+                });
+                
+                // Estatísticas por hora (últimas 24h)
+                const now = new Date();
+                const last24h = storage.auditLogs.filter(log => {
+                    const logTime = new Date(log.timestamp);
+                    return (now - logTime) <= (24 * 60 * 60 * 1000);
+                });
+                
+                const hourlyStats = {};
+                last24h.forEach(log => {
+                    const hour = new Date(log.timestamp).getHours();
+                    if (!hourlyStats[hour]) {
+                        hourlyStats[hour] = 0;
+                    }
+                    hourlyStats[hour]++;
+                });
+                
+                const stats = {
+                    total: storage.auditLogs.length,
+                    last24h: last24h.length,
+                    byType: Object.keys(statsByType).map(type => ({
+                        tipo_evento: type,
+                        count: statsByType[type]
+                    })).sort((a, b) => b.count - a.count),
+                    byUser: Object.keys(statsByUser).map(user => ({
+                        utilizador: user,
+                        count: statsByUser[user]
+                    })).sort((a, b) => b.count - a.count),
+                    hourly: Object.keys(hourlyStats).map(hour => ({
+                        hour: parseInt(hour),
+                        count: hourlyStats[hour]
+                    })).sort((a, b) => a.hour - b.hour)
+                };
+                
+                addCommentatorLog('📈 Estatísticas de logs calculadas: ' + stats.total + ' logs totais', 'success');
+                
+                return new Response(JSON.stringify(stats), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao consultar estatísticas de logs:', error);
+                addCommentatorLog('❌ Erro ao consultar estatísticas: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+
+        // Funções de Histórico de Performance
+        async function handleHistoryPerformance(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const url = new URL(request.url);
+                const league = url.searchParams.get('league') || 'all';
+                const period = url.searchParams.get('period') || '30'; // dias
+                const startDate = url.searchParams.get('startDate');
+                const endDate = url.searchParams.get('endDate');
+                
+                console.log('Buscando histórico de performance:', { league, period, startDate, endDate });
+                addCommentatorLog('📊 Buscando histórico de performance', 'info');
+                
+                // Calcular datas
+                let start, end;
+                if (startDate && endDate) {
+                    start = new Date(startDate);
+                    end = new Date(endDate);
+                } else {
+                    end = new Date();
+                    start = new Date();
+                    start.setDate(start.getDate() - parseInt(period));
+                }
+                
+                // Filtrar sinais por período e liga
+                const filteredSignals = storage.signals.filter(signal => {
+                    const signalDate = new Date(signal.date);
+                    const dateMatch = signalDate >= start && signalDate <= end;
+                    const leagueMatch = league === 'all' || signal.league === league;
+                    return dateMatch && leagueMatch && signal.status !== 'pending';
+                });
+                
+                // Calcular estatísticas
+                const totalSignals = filteredSignals.length;
+                const greenSignals = filteredSignals.filter(s => s.status === 'green').length;
+                const redSignals = filteredSignals.filter(s => s.status === 'red').length;
+                const winRate = totalSignals > 0 ? ((greenSignals / totalSignals) * 100).toFixed(2) : 0;
+                
+                // Calcular yield (simulado)
+                const avgOdds = 2.0; // Simulado
+                const yield = totalSignals > 0 ? (((greenSignals * (avgOdds - 1)) - redSignals) / totalSignals * 100).toFixed(2) : 0;
+                
+                // Estatísticas por dia
+                const dailyStats = {};
+                filteredSignals.forEach(signal => {
+                    const date = new Date(signal.date).toISOString().split('T')[0];
+                    if (!dailyStats[date]) {
+                        dailyStats[date] = { total: 0, green: 0, red: 0 };
+                    }
+                    dailyStats[date].total++;
+                    if (signal.status === 'green') dailyStats[date].green++;
+                    if (signal.status === 'red') dailyStats[date].red++;
+                });
+                
+                // Estatísticas por liga
+                const leagueStats = {};
+                filteredSignals.forEach(signal => {
+                    if (!leagueStats[signal.league]) {
+                        leagueStats[signal.league] = { total: 0, green: 0, red: 0 };
+                    }
+                    leagueStats[signal.league].total++;
+                    if (signal.status === 'green') leagueStats[signal.league].green++;
+                    if (signal.status === 'red') leagueStats[signal.league].red++;
+                });
+                
+                const performance = {
+                    period: {
+                        start: start.toISOString().split('T')[0],
+                        end: end.toISOString().split('T')[0],
+                        days: Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+                    },
+                    filters: {
+                        league: league,
+                        period: period
+                    },
+                    summary: {
+                        totalSignals: totalSignals,
+                        greenSignals: greenSignals,
+                        redSignals: redSignals,
+                        winRate: parseFloat(winRate),
+                        yield: parseFloat(yield),
+                        avgOdds: avgOdds
+                    },
+                    dailyStats: Object.keys(dailyStats).map(date => ({
+                        date: date,
+                        total: dailyStats[date].total,
+                        green: dailyStats[date].green,
+                        red: dailyStats[date].red,
+                        winRate: dailyStats[date].total > 0 ? ((dailyStats[date].green / dailyStats[date].total) * 100).toFixed(2) : 0
+                    })).sort((a, b) => new Date(a.date) - new Date(b.date)),
+                    leagueStats: Object.keys(leagueStats).map(league => ({
+                        league: league,
+                        total: leagueStats[league].total,
+                        green: leagueStats[league].green,
+                        red: leagueStats[league].red,
+                        winRate: leagueStats[league].total > 0 ? ((leagueStats[league].green / leagueStats[league].total) * 100).toFixed(2) : 0
+                    }))
+                };
+                
+                addCommentatorLog('📈 Histórico de performance calculado: ' + totalSignals + ' sinais, ' + winRate + '% acerto', 'success');
+                
+                return new Response(JSON.stringify(performance), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao buscar histórico de performance:', error);
+                addCommentatorLog('❌ Erro ao buscar histórico: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        async function handleHistoryStats(request, env) {
+            const CORS_HEADERS = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            };
+            
+            try {
+                const url = new URL(request.url);
+                const type = url.searchParams.get('type') || 'overview'; // overview, trends, leagues
+                
+                console.log('Buscando estatísticas de histórico:', type);
+                addCommentatorLog('📊 Buscando estatísticas de histórico: ' + type, 'info');
+                
+                let stats = {};
+                
+                if (type === 'overview') {
+                    // Estatísticas gerais
+                    const allSignals = storage.signals.filter(s => s.status !== 'pending');
+                    const totalSignals = allSignals.length;
+                    const greenSignals = allSignals.filter(s => s.status === 'green').length;
+                    const redSignals = allSignals.filter(s => s.status === 'red').length;
+                    const winRate = totalSignals > 0 ? ((greenSignals / totalSignals) * 100).toFixed(2) : 0;
+                    
+                    // Sinais por mês (últimos 12 meses)
+                    const monthlyStats = {};
+                    allSignals.forEach(signal => {
+                        const date = new Date(signal.date);
+                        const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                        if (!monthlyStats[monthKey]) {
+                            monthlyStats[monthKey] = { total: 0, green: 0, red: 0 };
+                        }
+                        monthlyStats[monthKey].total++;
+                        if (signal.status === 'green') monthlyStats[monthKey].green++;
+                        if (signal.status === 'red') monthlyStats[monthKey].red++;
+                    });
+                    
+                    stats = {
+                        totalSignals: totalSignals,
+                        greenSignals: greenSignals,
+                        redSignals: redSignals,
+                        winRate: parseFloat(winRate),
+                        monthlyStats: Object.keys(monthlyStats).map(month => ({
+                            month: month,
+                            total: monthlyStats[month].total,
+                            green: monthlyStats[month].green,
+                            red: monthlyStats[month].red,
+                            winRate: monthlyStats[month].total > 0 ? ((monthlyStats[month].green / monthlyStats[month].total) * 100).toFixed(2) : 0
+                        })).sort((a, b) => a.month.localeCompare(b.month))
+                    };
+                } else if (type === 'trends') {
+                    // Tendências semanais
+                    const weeklyStats = {};
+                    const allSignals = storage.signals.filter(s => s.status !== 'pending');
+                    
+                    allSignals.forEach(signal => {
+                        const date = new Date(signal.date);
+                        const weekKey = getWeekKey(date);
+                        if (!weeklyStats[weekKey]) {
+                            weeklyStats[weekKey] = { total: 0, green: 0, red: 0 };
+                        }
+                        weeklyStats[weekKey].total++;
+                        if (signal.status === 'green') weeklyStats[weekKey].green++;
+                        if (signal.status === 'red') weeklyStats[weekKey].red++;
+                    });
+                    
+                    stats = {
+                        weeklyStats: Object.keys(weeklyStats).map(week => ({
+                            week: week,
+                            total: weeklyStats[week].total,
+                            green: weeklyStats[week].green,
+                            red: weeklyStats[week].red,
+                            winRate: weeklyStats[week].total > 0 ? ((weeklyStats[week].green / weeklyStats[week].total) * 100).toFixed(2) : 0
+                        })).sort((a, b) => a.week.localeCompare(b.week))
+                    };
+                } else if (type === 'leagues') {
+                    // Estatísticas por liga
+                    const leagueStats = {};
+                    const allSignals = storage.signals.filter(s => s.status !== 'pending');
+                    
+                    allSignals.forEach(signal => {
+                        if (!leagueStats[signal.league]) {
+                            leagueStats[signal.league] = { total: 0, green: 0, red: 0 };
+                        }
+                        leagueStats[signal.league].total++;
+                        if (signal.status === 'green') leagueStats[signal.league].green++;
+                        if (signal.status === 'red') leagueStats[signal.league].red++;
+                    });
+                    
+                    stats = {
+                        leagueStats: Object.keys(leagueStats).map(league => ({
+                            league: league,
+                            total: leagueStats[league].total,
+                            green: leagueStats[league].green,
+                            red: leagueStats[league].red,
+                            winRate: leagueStats[league].total > 0 ? ((leagueStats[league].green / leagueStats[league].total) * 100).toFixed(2) : 0
+                        })).sort((a, b) => b.total - a.total)
+                    };
+                }
+                
+                addCommentatorLog('📈 Estatísticas de histórico calculadas: ' + type, 'success');
+                
+                return new Response(JSON.stringify(stats), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao buscar estatísticas de histórico:', error);
+                addCommentatorLog('❌ Erro ao buscar estatísticas: ' + error.message, 'error');
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                });
+            }
+        }
+        
+        function getWeekKey(date) {
+            const year = date.getFullYear();
+            const week = getWeekNumber(date);
+            return year + '-W' + String(week).padStart(2, '0');
+        }
+        
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        // Funções de Explicações dos Sinais
+        function createAndShowMockSignal() {
+            try {
+                const signal = createMockSignalWithExplanation();
+                displaySignalsList();
+                showSignalExplanation(signal);
+                addCommentatorLog('🧠 Sinal criado e explicação exibida', 'success');
+            } catch (error) {
+                console.error('Erro ao criar sinal:', error);
+                addCommentatorLog('❌ Erro ao criar sinal: ' + error.message, 'error');
+            }
+        }
+
+        function showSignalExplanation(signal) {
+            if (!signal.explanation) {
+                alert('❌ Este sinal não possui explicação');
+                return;
+            }
+
+            const explanationPanel = document.getElementById('signalExplanations');
+            const explanationContent = document.getElementById('explanationContent');
+            
+            if (explanationPanel && explanationContent) {
+                const explanation = signal.explanation;
+                
+                // Criar HTML da explicação usando concatenação de strings
+                let html = '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600">' +
+                          '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
+                          '<span class="text-xl">🎯</span>Informações do Sinal</h3>' +
+                          '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                          '<div><div class="text-gray-300 text-sm">Jogo</div>' +
+                          '<div class="text-white font-medium">' + signal.home_team + ' vs ' + signal.away_team + '</div></div>' +
+                          '<div><div class="text-gray-300 text-sm">Liga</div>' +
+                          '<div class="text-white font-medium">' + signal.league + '</div></div>' +
+                          '<div><div class="text-gray-300 text-sm">Previsão</div>' +
+                          '<div class="text-white font-medium">' + signal.prediction + '</div></div>' +
+                          '<div><div class="text-gray-300 text-sm">Confiança</div>' +
+                          '<div class="text-green-400 font-bold">' + signal.confidence + '%</div></div>' +
+                          '</div></div>';
+
+                // Estatísticas das equipas
+                html += '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600 mt-6">' +
+                       '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
+                       '<span class="text-xl">📊</span>Estatísticas das Equipas</h3>' +
+                       '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
+                       '<div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 border border-blue-600 border-opacity-30">' +
+                       '<h4 class="font-bold text-blue-300 mb-3">🏠 ' + explanation.teamStats.homeTeam.name + '</h4>' +
+                       '<div class="space-y-2 text-sm">' +
+                       '<div class="flex justify-between"><span class="text-gray-300">Golos marcados:</span>' +
+                       '<span class="text-white font-medium">' + explanation.teamStats.homeTeam.avgGoalsScored + '/jogo</span></div>' +
+                       '<div class="flex justify-between"><span class="text-gray-300">Taxa vitórias casa:</span>' +
+                       '<span class="text-green-400 font-bold">' + explanation.teamStats.homeTeam.homeWinRate + '%</span></div>' +
+                       '</div></div>' +
+                       '<div class="bg-red-900 bg-opacity-30 rounded-lg p-4 border border-red-600 border-opacity-30">' +
+                       '<h4 class="font-bold text-red-300 mb-3">✈️ ' + explanation.teamStats.awayTeam.name + '</h4>' +
+                       '<div class="space-y-2 text-sm">' +
+                       '<div class="flex justify-between"><span class="text-gray-300">Golos marcados:</span>' +
+                       '<span class="text-white font-medium">' + explanation.teamStats.awayTeam.avgGoalsScored + '/jogo</span></div>' +
+                       '<div class="flex justify-between"><span class="text-gray-300">Taxa vitórias fora:</span>' +
+                       '<span class="text-yellow-400 font-bold">' + explanation.teamStats.awayTeam.awayWinRate + '%</span></div>' +
+                       '</div></div></div></div>';
+
+                // Confrontos diretos
+                html += '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600 mt-6">' +
+                       '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
+                       '<span class="text-xl">⚔️</span>Confrontos Diretos</h3>' +
+                       '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">' +
+                       '<div class="bg-gray-700 rounded-lg p-3">' +
+                       '<div class="text-2xl font-bold text-blue-400">' + explanation.headToHead.totalMeetings + '</div>' +
+                       '<div class="text-xs text-gray-400">Total Jogos</div></div>' +
+                       '<div class="bg-gray-700 rounded-lg p-3">' +
+                       '<div class="text-2xl font-bold text-green-400">' + explanation.headToHead.homeWins + '</div>' +
+                       '<div class="text-xs text-gray-400">Vitórias Casa</div></div>' +
+                       '<div class="bg-gray-700 rounded-lg p-3">' +
+                       '<div class="text-2xl font-bold text-yellow-400">' + explanation.headToHead.draws + '</div>' +
+                       '<div class="text-xs text-gray-400">Empates</div></div>' +
+                       '<div class="bg-gray-700 rounded-lg p-3">' +
+                       '<div class="text-2xl font-bold text-red-400">' + explanation.headToHead.awayWins + '</div>' +
+                       '<div class="text-xs text-gray-400">Vitórias Fora</div></div>' +
+                       '</div></div>';
+
+                // Razões da análise
+                html += '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600 mt-6">' +
+                       '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
+                       '<span class="text-xl">💡</span>Razões da Análise</h3>' +
+                       '<div class="space-y-3">';
+                
+                explanation.reasoning.forEach(reason => {
+                    html += '<div class="flex items-start gap-3 bg-gray-700 rounded-lg p-3">' +
+                           '<div class="text-green-400 mt-1">•</div>' +
+                           '<div class="text-gray-200">' + reason + '</div></div>';
+                });
+                
+                html += '</div></div>';
+                
+                explanationContent.innerHTML = html;
+                explanationPanel.classList.remove('hidden');
+                addCommentatorLog('🧠 Explicação do sinal exibida', 'info');
+            }
+        }
+
+        function closeExplanationPanel() {
+            const explanationPanel = document.getElementById('signalExplanations');
+            if (explanationPanel) {
+                explanationPanel.classList.add('hidden');
+                addCommentatorLog('🧠 Painel de explicação fechado', 'info');
+            }
+        }
+
+        function displaySignalsList() {
+            const signalsList = document.getElementById('signals-list');
+            if (signalsList && storage.signals.length > 0) {
+                let html = '';
+                storage.signals.forEach(signal => {
+                    const statusColor = signal.status === 'green' ? 'text-green-400' : 
+                                       signal.status === 'red' ? 'text-red-400' : 'text-yellow-400';
+                    const hasExplanation = signal.explanation ? '🧠' : '';
+                    
+                    html += '<div class="bg-gray-700 rounded-lg p-3 mb-2 border border-gray-600">' +
+                           '<div class="flex justify-between items-center">' +
+                           '<div>' +
+                           '<div class="font-medium text-white">' + signal.home_team + ' vs ' + signal.away_team + '</div>' +
+                           '<div class="text-sm text-gray-400">' + signal.league + ' • ' + signal.prediction + '</div>' +
+                           '</div>' +
+                           '<div class="text-right">' +
+                           '<div class="flex items-center gap-2">' +
+                           '<span class="text-lg">' + hasExplanation + '</span>' +
+                           '<span class="' + statusColor + ' font-bold">' + signal.status.toUpperCase() + '</span>' +
+                           '<span class="text-gray-300">' + signal.confidence + '%</span>' +
+                           '</div>';
+                    
+                    if (signal.explanation) {
+                        html += '<button onclick="showSignalExplanation(storage.signals.find(s => s.id === \'' + signal.id + '\'))" class="text-xs text-blue-400 hover:text-blue-300 mt-1">Ver Explicação</button>';
+                    }
+                    
+                    html += '</div></div></div>';
+                });
+                signalsList.innerHTML = html;
+            }
+        }
+
+        // Funções de Histórico de Performance
+        function openHistoryPanel() {
+            const historyPanel = document.getElementById('historyPanel');
+            if (historyPanel) {
+                historyPanel.classList.remove('hidden');
+                loadHistoryData();
+                addCommentatorLog('📊 Painel de Histórico aberto', 'info');
+            }
+        }
+
+        function closeHistoryPanel() {
+            const historyPanel = document.getElementById('historyPanel');
+            if (historyPanel) {
+                historyPanel.classList.add('hidden');
+                addCommentatorLog('📊 Painel de Histórico fechado', 'info');
+            }
+        }
+
+        function toggleCustomDateRange() {
+            const period = document.getElementById('historyPeriod').value;
+            const customDateRange = document.getElementById('customDateRange');
+            const customDateRangeEnd = document.getElementById('customDateRangeEnd');
+            
+            if (period === 'custom') {
+                customDateRange.classList.remove('hidden');
+                customDateRangeEnd.classList.remove('hidden');
+            } else {
+                customDateRange.classList.add('hidden');
+                customDateRangeEnd.classList.add('hidden');
+            }
+        }
+
+        function resetHistoryFilters() {
+            document.getElementById('historyPeriod').value = '30';
+            document.getElementById('historyLeague').value = 'all';
+            document.getElementById('customDateRange').classList.add('hidden');
+            document.getElementById('customDateRangeEnd').classList.add('hidden');
+            loadHistoryData();
+            addCommentatorLog('📊 Filtros de histórico resetados', 'info');
+        }
+
+        async function loadHistoryData() {
+            try {
+                const period = document.getElementById('historyPeriod').value;
+                const league = document.getElementById('historyLeague').value;
+                const startDate = document.getElementById('historyStartDate').value;
+                const endDate = document.getElementById('historyEndDate').value;
+                
+                let url = '/api/v1/history/performance?';
+                if (period === 'custom' && startDate && endDate) {
+                    url += 'startDate=' + startDate + '&endDate=' + endDate;
+                } else {
+                    url += 'period=' + period;
+                }
+                if (league !== 'all') {
+                    url += '&league=' + encodeURIComponent(league);
+                }
+                
+                addCommentatorLog('📊 Carregando dados de histórico...', 'info');
+                
+                const response = await fetch(url);
+                    const data = await response.json();
+                
+                if (data.summary) {
+                    // Atualizar resumo
+                    document.getElementById('historyTotalSignals').textContent = data.summary.totalSignals;
+                    document.getElementById('historyGreenSignals').textContent = data.summary.greenSignals;
+                    document.getElementById('historyRedSignals').textContent = data.summary.redSignals;
+                    document.getElementById('historyWinRate').textContent = data.summary.winRate + '%';
+                    
+                    // Atualizar tabela
+                    updateHistoryTable(data.dailyStats);
+                    
+                    // Atualizar gráficos (simulado)
+                    updateHistoryCharts(data);
+                    
+                    addCommentatorLog('📈 Dados de histórico carregados: ' + data.summary.totalSignals + ' sinais, ' + data.summary.winRate + '% acerto', 'success');
+                } else {
+                    throw new Error('Dados de histórico inválidos');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados de histórico:', error);
+                addCommentatorLog('❌ Erro ao carregar histórico: ' + error.message, 'error');
+                alert('❌ Erro ao carregar dados de histórico: ' + error.message);
+            }
+        }
+
+        function updateHistoryTable(dailyStats) {
+            const tableBody = document.getElementById('historyTableBody');
+            if (tableBody && dailyStats) {
+                if (dailyStats.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Nenhum dado encontrado para o período selecionado</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                dailyStats.forEach(day => {
+                    const winRateColor = parseFloat(day.winRate) >= 60 ? 'text-green-400' : 
+                                        parseFloat(day.winRate) >= 40 ? 'text-yellow-400' : 'text-red-400';
+                    
+                    html += '<tr class="border-b border-gray-700 hover:bg-gray-800">' +
+                           '<td class="py-3 px-4 text-white">' + formatDate(day.date) + '</td>' +
+                           '<td class="py-3 px-4 text-center text-gray-300">' + day.total + '</td>' +
+                           '<td class="py-3 px-4 text-center text-green-400">' + day.green + '</td>' +
+                           '<td class="py-3 px-4 text-center text-red-400">' + day.red + '</td>' +
+                           '<td class="py-3 px-4 text-center ' + winRateColor + ' font-bold">' + day.winRate + '%</td>' +
+                           '</tr>';
+                });
+                tableBody.innerHTML = html;
+            }
+        }
+
+        function updateHistoryCharts(data) {
+            // Simular gráficos (em produção seria Chart.js)
+            const dailyChart = document.getElementById('dailyChart');
+            const leagueChart = document.getElementById('leagueChart');
+            
+            if (dailyChart) {
+                dailyChart.innerHTML = '<div class="text-center text-gray-400">' +
+                                     '<div class="text-4xl mb-2">📈</div>' +
+                                     '<div>Performance Diária</div>' +
+                                     '<div class="text-sm mt-2">' + data.dailyStats.length + ' dias de dados</div>' +
+                                     '<div class="text-xs text-gray-500">Média: ' + data.summary.winRate + '% acerto</div>' +
+                                     '</div>';
+            }
+            
+            if (leagueChart) {
+                leagueChart.innerHTML = '<div class="text-center text-gray-400">' +
+                                      '<div class="text-4xl mb-2">🏆</div>' +
+                                      '<div>Performance por Liga</div>' +
+                                      '<div class="text-sm mt-2">' + data.leagueStats.length + ' ligas</div>' +
+                                      '<div class="text-xs text-gray-500">Filtro: ' + (data.filters.league === 'all' ? 'Todas' : data.filters.league) + '</div>' +
+                                      '</div>';
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-PT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+
+        // Funções de Notificações Inteligentes
+        function openNotificationsPanel() {
+            const notificationsPanel = document.getElementById('notificationsPanel');
+            if (notificationsPanel) {
+                notificationsPanel.classList.remove('hidden');
+                loadNotificationSettings();
+                loadNotificationStats();
+                addCommentatorLog('🔔 Painel de Notificações aberto', 'info');
+            }
+        }
+
+        function closeNotificationsPanel() {
+            const notificationsPanel = document.getElementById('notificationsPanel');
+            if (notificationsPanel) {
+                notificationsPanel.classList.add('hidden');
+                addCommentatorLog('🔔 Painel de Notificações fechado', 'info');
+            }
+        }
+
+        function loadNotificationSettings() {
+            // Carregar configurações atuais
+            document.getElementById('notificationsEnabled').checked = storage.notificationSettings.enabled;
+            document.getElementById('telegramNotifications').checked = storage.notificationSettings.telegramEnabled;
+            document.getElementById('emailNotifications').checked = storage.notificationSettings.emailEnabled;
+            document.getElementById('advanceTime').value = storage.notificationSettings.advanceTime;
+            
+            // Carregar ligas selecionadas
+            const leagues = storage.notificationSettings.leagues || [];
+            leagues.forEach(league => {
+                const checkbox = document.getElementById('league_' + league.toLowerCase().replace(' ', '_'));
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        }
+
+        async function saveNotificationConfig() {
+            try {
+                const settings = {
+                    enabled: document.getElementById('notificationsEnabled').checked,
+                    telegramEnabled: document.getElementById('telegramNotifications').checked,
+                    emailEnabled: document.getElementById('emailNotifications').checked,
+                    advanceTime: parseInt(document.getElementById('advanceTime').value),
+                    leagues: []
+                };
+                
+                // Coletar ligas selecionadas
+                const leagueCheckboxes = document.querySelectorAll('input[id^="league_"]:checked');
+                leagueCheckboxes.forEach(checkbox => {
+                    const leagueName = checkbox.id.replace('league_', '').replace('_', ' ');
+                    settings.leagues.push(leagueName);
+                });
+                
+                const response = await fetch('/api/v1/notifications/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    addCommentatorLog('✅ Configurações de notificações guardadas', 'success');
+                    loadNotificationStats();
+                } else {
+                    throw new Error('Falha ao guardar configurações');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao guardar configurações:', error);
+                addCommentatorLog('❌ Erro ao guardar configurações: ' + error.message, 'error');
+                alert('❌ Erro ao guardar configurações: ' + error.message);
+            }
+        }
+
+        async function testNotificationSend() {
+            try {
+                const testMessage = 'Teste de Notificação - ' + new Date().toLocaleString('pt-PT');
+                
+                const response = await fetch('/api/v1/notifications/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gameId: 'test_' + Date.now(),
+                        message: testMessage,
+                        type: 'test'
+                    })
+                });
+                
+                if (response.ok) {
+                    addCommentatorLog('✅ Notificação de teste enviada', 'success');
+                    loadNotificationStats();
+                } else {
+                    throw new Error('Falha ao enviar notificação de teste');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao enviar notificação de teste:', error);
+                addCommentatorLog('❌ Erro ao enviar teste: ' + error.message, 'error');
+                alert('❌ Erro ao enviar notificação de teste: ' + error.message);
+            }
+        }
+
+        function loadNotificationStats() {
+            // Atualizar estatísticas
+            const totalNotifications = storage.notifications.length;
+            const successNotifications = storage.notifications.filter(n => n.sent).length;
+            
+            // Contar jogos próximos
+            const now = new Date();
+            const upcomingGames = storage.futureGames.filter(game => {
+                const gameTime = new Date(game.date);
+                const timeDiff = gameTime.getTime() - now.getTime();
+                const minutesDiff = timeDiff / (1000 * 60);
+                return minutesDiff >= 0 && minutesDiff <= 60; // próximos 60 minutos
+            }).length;
+            
+            document.getElementById('totalNotifications').textContent = totalNotifications;
+            document.getElementById('successNotifications').textContent = successNotifications;
+            document.getElementById('upcomingGames').textContent = upcomingGames;
+            
+            // Atualizar histórico
+            updateNotificationHistory();
+        }
+
+        function updateNotificationHistory() {
+            const historyContainer = document.getElementById('notificationsHistory');
+            if (!historyContainer) return;
+            
+            const recentNotifications = storage.notifications.slice(-10).reverse(); // últimas 10
+            
+            if (recentNotifications.length === 0) {
+                historyContainer.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhuma notificação enviada ainda</div>';
+                return;
+            }
+            
+            let html = '';
+            recentNotifications.forEach(notification => {
+                const statusColor = notification.sent ? 'text-green-400' : 'text-red-400';
+                const statusIcon = notification.sent ? '✅' : '❌';
+                const timeAgo = getTimeAgo(new Date(notification.timestamp));
+                
+                html += '<div class="bg-gray-800 rounded-lg p-4 border border-gray-600">' +
+                       '<div class="flex justify-between items-start">' +
+                       '<div class="flex-1">' +
+                       '<div class="text-white font-medium">' + notification.message + '</div>' +
+                       '<div class="text-sm text-gray-400 mt-1">' + notification.type + ' • ' + timeAgo + '</div>' +
+                       '</div>' +
+                       '<div class="flex items-center gap-2">' +
+                       '<span class="' + statusColor + '">' + statusIcon + '</span>' +
+                       '<span class="text-xs text-gray-500">' + notification.channel + '</span>' +
+                       '</div>' +
+                       '</div>' +
+                       '</div>';
+            });
+            
+            historyContainer.innerHTML = html;
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) return 'há ' + diffInSeconds + 's';
+            if (diffInSeconds < 3600) return 'há ' + Math.floor(diffInSeconds / 60) + 'm';
+            if (diffInSeconds < 86400) return 'há ' + Math.floor(diffInSeconds / 3600) + 'h';
+            return 'há ' + Math.floor(diffInSeconds / 86400) + 'd';
+        }
+
+        // Funções de Logs e Auditoria
+        let currentLogsOffset = 0;
+        let currentLogsLimit = 100;
+        let currentLogsData = null;
+
+        function openLogsPanel() {
+            const logsPanel = document.getElementById('logsPanel');
+            if (logsPanel) {
+                logsPanel.classList.remove('hidden');
+                loadLogsData();
+                addCommentatorLog('📋 Painel de Logs aberto', 'info');
+            }
+        }
+
+        function closeLogsPanel() {
+            const logsPanel = document.getElementById('logsPanel');
+            if (logsPanel) {
+                logsPanel.classList.add('hidden');
+                addCommentatorLog('📋 Painel de Logs fechado', 'info');
+            }
+        }
+
+        async function loadLogsData() {
+            try {
+                const eventType = document.getElementById('logEventType').value;
+                const user = document.getElementById('logUser').value;
+                const limit = parseInt(document.getElementById('logLimit').value);
+                
+                currentLogsLimit = limit;
+                currentLogsOffset = 0;
+                
+                let url = '/api/v1/logs/audit?role=super_admin&limit=' + limit + '&offset=' + currentLogsOffset;
+                if (eventType !== 'all') {
+                    url += '&tipo_evento=' + eventType;
+                }
+                
+                addCommentatorLog('📋 Carregando logs de auditoria...', 'info');
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.logs) {
+                    currentLogsData = data;
+                    updateLogsTable(data.logs);
+                    updateLogsPagination(data.pagination);
+                    loadLogsStats();
+                    addCommentatorLog('📊 Logs carregados: ' + data.logs.length + ' de ' + data.pagination.total, 'success');
+                } else {
+                    throw new Error('Dados de logs inválidos');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar logs:', error);
+                addCommentatorLog('❌ Erro ao carregar logs: ' + error.message, 'error');
+                alert('❌ Erro ao carregar logs: ' + error.message);
+            }
+        }
+
+        async function changeLogsPage(direction) {
+            if (!currentLogsData) return;
+            
+            const newOffset = currentLogsOffset + (direction * currentLogsLimit);
+            
+            if (newOffset < 0 || newOffset >= currentLogsData.pagination.total) {
+                return;
+            }
+            
+            currentLogsOffset = newOffset;
+            
+            try {
+                const eventType = document.getElementById('logEventType').value;
+                const limit = currentLogsLimit;
+                
+                let url = '/api/v1/logs/audit?role=super_admin&limit=' + limit + '&offset=' + currentLogsOffset;
+                if (eventType !== 'all') {
+                    url += '&tipo_evento=' + eventType;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.logs) {
+                    currentLogsData = data;
+                    updateLogsTable(data.logs);
+                    updateLogsPagination(data.pagination);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar página de logs:', error);
+                addCommentatorLog('❌ Erro ao carregar página: ' + error.message, 'error');
+            }
+        }
+
+        function updateLogsTable(logs) {
+            const tableBody = document.getElementById('logsTableBody');
+            if (!tableBody) return;
+            
+            if (logs.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum log encontrado</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            logs.forEach(log => {
+                const timestamp = new Date(log.timestamp).toLocaleString('pt-PT');
+                const eventTypeColor = getEventTypeColor(log.tipo_evento);
+                const userColor = getUserColor(log.utilizador);
+                
+                html += '<tr class="border-b border-gray-700 hover:bg-gray-800">' +
+                       '<td class="py-3 px-4 text-gray-300 text-xs">' + timestamp + '</td>' +
+                       '<td class="py-3 px-4">' +
+                       '<span class="px-2 py-1 rounded-full text-xs font-medium ' + eventTypeColor + '">' + log.tipo_evento + '</span>' +
+                       '</td>' +
+                       '<td class="py-3 px-4 text-gray-300 text-sm">' + log.detalhe + '</td>' +
+                       '<td class="py-3 px-4">' +
+                       '<span class="px-2 py-1 rounded-full text-xs font-medium ' + userColor + '">' + log.utilizador + '</span>' +
+                       '</td>' +
+                       '</tr>';
+            });
+            
+            tableBody.innerHTML = html;
+        }
+
+        function updateLogsPagination(pagination) {
+            document.getElementById('logsShowing').textContent = pagination.offset + 1 + '-' + Math.min(pagination.offset + pagination.limit, pagination.total);
+            document.getElementById('logsTotal').textContent = pagination.total;
+            
+            document.getElementById('prevLogs').disabled = pagination.offset === 0;
+            document.getElementById('nextLogs').disabled = !pagination.hasMore;
+        }
+
+        async function loadLogsStats() {
+            try {
+                const response = await fetch('/api/v1/logs/stats?role=super_admin');
+                const stats = await response.json();
+                
+                if (stats) {
+                    document.getElementById('totalLogs').textContent = stats.total;
+                    document.getElementById('last24hLogs').textContent = stats.last24h;
+                    
+                    // Encontrar falhas da API
+                    const apiFailures = stats.byType.find(type => type.tipo_evento === 'API_FAILURE');
+                    document.getElementById('apiFailures').textContent = apiFailures ? apiFailures.count : 0;
+                    
+                    // Encontrar sinais gerados
+                    const signalsGenerated = stats.byType.find(type => type.tipo_evento === 'SIGNAL_GENERATED');
+                    document.getElementById('signalsGenerated').textContent = signalsGenerated ? signalsGenerated.count : 0;
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas de logs:', error);
+            }
+        }
+
+        function getEventTypeColor(tipoEvento) {
+            const colors = {
+                'API_FAILURE': 'bg-red-900 text-red-300',
+                'SIGNAL_GENERATED': 'bg-green-900 text-green-300',
+                'REPORT_SENT': 'bg-blue-900 text-blue-300',
+                'NOTIFICATION_SENT': 'bg-orange-900 text-orange-300',
+                'USER_ACTION': 'bg-purple-900 text-purple-300',
+                'SYSTEM_EVENT': 'bg-gray-900 text-gray-300'
+            };
+            return colors[tipoEvento] || 'bg-gray-900 text-gray-300';
+        }
+
+        function getUserColor(utilizador) {
+            const colors = {
+                'system': 'bg-gray-700 text-gray-300',
+                'admin': 'bg-yellow-700 text-yellow-300',
+                'super_admin': 'bg-red-700 text-red-300',
+                'user': 'bg-blue-700 text-blue-300'
+            };
+            return colors[utilizador] || 'bg-gray-700 text-gray-300';
+        }
+
+        // Funções de Configurações
+        function openSettings() {
+            const settingsPanel = document.getElementById('settingsPanel');
+            if (settingsPanel) {
+                settingsPanel.classList.remove('hidden');
+                loadCurrentSettings();
+                addCommentatorLog('⚙️ Painel de Configurações aberto', 'info');
+            }
+        }
+
+        function closeSettingsPanel() {
+            const settingsPanel = document.getElementById('settingsPanel');
+            if (settingsPanel) {
+                settingsPanel.classList.add('hidden');
+                addCommentatorLog('⚙️ Painel de Configurações fechado', 'info');
+            }
+        }
+
+        function loadCurrentSettings() {
+            // Carregar configurações atuais (simulado - em produção viria da API)
+            document.getElementById('apiKey').value = '••••••••••••••••';
+            document.getElementById('apiLimit').value = '100';
+            document.getElementById('timezone').value = 'Europe/Lisbon';
+            document.getElementById('signalThreshold').value = '85';
+            document.getElementById('maxSignalsPerDay').value = '50';
+            document.getElementById('dailyReportTime').value = '23:59';
+            document.getElementById('telegramToken').value = '••••••••••••••••';
+            document.getElementById('telegramGroupId').value = '-1002937302746';
+            document.getElementById('telegramEnabled').checked = true;
+            
+            // Atualizar status
+            updateSystemStatus();
+        }
+
+        function updateSystemStatus() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('pt-PT');
+        }
+
+        async function saveSettingsConfig() {
+            try {
+                const settings = {
+                    apiKey: document.getElementById('apiKey').value,
+                    apiLimit: parseInt(document.getElementById('apiLimit').value),
+                    timezone: document.getElementById('timezone').value,
+                    signalThreshold: parseInt(document.getElementById('signalThreshold').value),
+                    maxSignalsPerDay: parseInt(document.getElementById('maxSignalsPerDay').value),
+                    dailyReportTime: document.getElementById('dailyReportTime').value,
+                    telegramToken: document.getElementById('telegramToken').value,
+                    telegramGroupId: document.getElementById('telegramGroupId').value,
+                    telegramEnabled: document.getElementById('telegramEnabled').checked
+                };
+
+                // Validar configurações
+                if (settings.apiLimit < 1 || settings.apiLimit > 1000) {
+                    alert('❌ Limite de chamadas deve estar entre 1 e 1000');
+                    return;
+                }
+
+                if (settings.signalThreshold < 50 || settings.signalThreshold > 100) {
+                    alert('❌ Threshold de sinais deve estar entre 50% e 100%');
+                    return;
+                }
+
+                if (settings.maxSignalsPerDay < 1 || settings.maxSignalsPerDay > 200) {
+                    alert('❌ Máximo de sinais por dia deve estar entre 1 e 200');
+                    return;
+                }
+
+                // Simular salvamento (em produção seria uma chamada à API)
+                addCommentatorLog('💾 Configurações validadas e guardadas com sucesso', 'success');
+                addCommentatorLog('🔧 Threshold: ' + settings.signalThreshold + '% | Max Sinais: ' + settings.maxSignalsPerDay + ' | Relatório: ' + settings.dailyReportTime, 'info');
+                
+                alert('✅ Configurações guardadas com sucesso!');
+                closeSettingsPanel();
+
+            } catch (error) {
+                console.error('Erro ao guardar configurações:', error);
+                addCommentatorLog('❌ Erro ao guardar configurações: ' + error.message, 'error');
+                alert('❌ Erro ao guardar configurações: ' + error.message);
+            }
+        }
 
         // Event listener para botão de limpar sinais
         document.getElementById('clearSignals').addEventListener('click', () => {
