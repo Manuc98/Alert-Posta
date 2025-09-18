@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { CalendarHorizontal } from '@/components/ui/calendar-horizontal'
 import { useToast } from '@/hooks/use-toast'
+import { useGames, Game } from '@/hooks/use-games'
 import { 
   Activity, 
   Bot, 
@@ -45,7 +47,10 @@ export default function DashboardPage() {
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [botLoading, setBotLoading] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [selectedGames, setSelectedGames] = useState<Game[]>([])
   const { toast } = useToast()
+  const { games, loading: gamesLoading, error: gamesError, fetchGames } = useGames()
 
   useEffect(() => {
     fetchDashboardData()
@@ -176,6 +181,16 @@ export default function DashboardPage() {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
     return `${hours}h ${minutes}m`
+  }
+
+  // Handlers para o calendário
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date)
+    fetchGames(date)
+  }
+
+  const handleGamesLoad = (games: Game[]) => {
+    setSelectedGames(games)
   }
 
   if (loading) {
@@ -332,27 +347,15 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Calendário e Jogos */}
+      <CalendarHorizontal 
+        onDateSelect={handleDateSelect}
+        onGamesLoad={handleGamesLoad}
+        selectedDate={selectedDate}
+      />
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Jogos</CardTitle>
-            <CardDescription>
-              Gerir jogos e análises
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                Ver Jogos ao Vivo
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Configurar Análise
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Sinais</CardTitle>
@@ -367,6 +370,29 @@ export default function DashboardPage() {
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 Exportar Dados
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Análise</CardTitle>
+            <CardDescription>
+              Configurar análise dos jogos selecionados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                disabled={selectedGames.length === 0}
+              >
+                Analisar Jogos Selecionados ({selectedGames.length})
+              </Button>
+              <Button variant="outline" className="w-full justify-start">
+                Configurar Filtros
               </Button>
             </div>
           </CardContent>
