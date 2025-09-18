@@ -5,7 +5,7 @@
 
 // Configurações
 const CONFIG = {
-  API_BASE_URL: 'https://your-backend-url.com', // Substituir pela URL real
+  API_BASE_URL: 'https://alertapostas-backend.ecarvalho140.workers.dev', // URL do backend
   CACHE_TTL: 300, // 5 minutos
   SITE_UPDATE_INTERVAL: 60, // 1 minuto para atualizações do site
   ALLOWED_ORIGINS: [

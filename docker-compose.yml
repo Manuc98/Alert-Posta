@@ -64,21 +64,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/alertpostas
-      - REDIS_URL=redis://redis:6379/0
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - ENVIRONMENT=development
-      - DEBUG=true
-      - API_FOOTBALL_KEY=623ead667fb69f339d1e8f9a366de721
-      - TELEGRAM_BOT_TOKEN=8031960776:AAFmB-UhPTfj3YauD6PPkjQW2VTsngJ3AIU
-      - TELEGRAM_CHAT_ID=-1002937302746
+    env_file:
+      - ./backend-config.env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      mlflow:
         condition: service_healthy
     volumes:
       - ./backend:/app
