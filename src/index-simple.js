@@ -9,9 +9,11 @@ const CONFIG = {
   CACHE_TTL: 300, // 5 minutos
   SITE_UPDATE_INTERVAL: 60, // 1 minuto para atualizações do site
   ALLOWED_ORIGINS: [
+    'https://alertapostas.pt',
+    'https://www.alertapostas.pt',
     'https://alertapostas.com',
     'https://www.alertapostas.com',
-    'https://alertpostas.yourdomain.com'
+    'https://alertapostas.ecarvalho140.workers.dev'
   ]
 };
 
