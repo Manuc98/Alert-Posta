@@ -1,0 +1,10 @@
+name = "alertapostas"
+main = "src/index-complete.js"
+compatibility_date = "2025-09-17"
+compatibility_flags = ["nodejs_compat"]
+
+# Variáveis de ambiente
+[vars]
+ENVIRONMENT = "production"
+API_BASE_URL = "https://alertapostas-backend.ecarvalho140.workers.dev"
+API_FOOTBALL_KEY = "623ead667fb69f339d1e8f9a366de721"

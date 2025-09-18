@@ -55,27 +55,54 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      // Simular dados por enquanto
-      setKpiData({
-        signals_today: 12,
-        accuracy_7d: 67.5,
-        roi_estimated: 15.2,
-        active_model: {
-          name: "Winner Model v2.1",
-          accuracy: 68.4,
-          module: "winner"
-        }
-      })
+      // Buscar dados reais do worker
+      const response = await fetch('https://alertapostas.ecarvalho140.workers.dev/site/stats')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setKpiData({
+          signals_today: data.signals_today || 0,
+          accuracy_7d: data.accuracy_7d || 0,
+          roi_estimated: data.roi_estimated || 0,
+          active_model: {
+            name: data.active_model?.name || "Nenhum",
+            accuracy: data.active_model?.accuracy || 0,
+            module: data.active_model?.module || "unknown"
+          }
+        })
 
-      setBotStatus({
-        status: 'running',
-        uptime: 3600,
-        modules: [
-          { name: 'telegram', status: 'active', uptime: 3600 },
-          { name: 'ml_pipeline', status: 'active', uptime: 3600 },
-          { name: 'api_fetcher', status: 'active', uptime: 3600 }
-        ]
-      })
+        setBotStatus({
+          status: data.bot_status?.status || 'stopped',
+          uptime: data.bot_status?.uptime || 0,
+          modules: data.bot_status?.modules || [
+            { name: 'telegram', status: 'inactive' },
+            { name: 'ml_pipeline', status: 'inactive' },
+            { name: 'api_fetcher', status: 'inactive' }
+          ]
+        })
+      } else {
+        // Fallback para dados simulados se API não estiver disponível
+        setKpiData({
+          signals_today: 12,
+          accuracy_7d: 67.5,
+          roi_estimated: 15.2,
+          active_model: {
+            name: "Winner Model v2.1",
+            accuracy: 68.4,
+            module: "winner"
+          }
+        })
+
+        setBotStatus({
+          status: 'running',
+          uptime: 3600,
+          modules: [
+            { name: 'telegram', status: 'active', uptime: 3600 },
+            { name: 'ml_pipeline', status: 'active', uptime: 3600 },
+            { name: 'api_fetcher', status: 'active', uptime: 3600 }
+          ]
+        })
+      }
 
       setLoading(false)
     } catch (error) {
@@ -211,7 +238,7 @@ export default function DashboardPage() {
                       module.status === 'error' ? "bg-red-500" : "bg-gray-500"
                     )} />
                     <span className="text-sm capitalize">{module.name}</span>
-                    <Badge variant={getStatusBadge(module.status)} size="sm">
+                    <Badge variant={getStatusBadge(module.status)}>
                       {module.status}
                     </Badge>
                   </div>

@@ -1,0 +1,16 @@
+name = "alertapostas-site"
+main = "src/index-site.js"
+compatibility_date = "2025-09-17"
+compatibility_flags = ["nodejs_compat"]
+
+# Configurações de cron triggers (para workers automáticos)
+[triggers]
+crons = [
+  "*/5 * * * *",  # A cada 5 minutos - trigger workers
+  "*/1 * * * *"   # A cada 1 minuto - atualizar dados do site
+]
+
+# Variáveis de ambiente
+[vars]
+ENVIRONMENT = "production"
+API_BASE_URL = "https://alertapostas-backend.ecarvalho140.workers.dev"
