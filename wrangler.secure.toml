@@ -1,5 +1,5 @@
-name = "alertapostas"
-main = "src/index-working.js"
+name = "alertapostas-secure"
+main = "src/index-secure.js"
 compatibility_date = "2025-09-17"
 compatibility_flags = ["nodejs_compat"]
 

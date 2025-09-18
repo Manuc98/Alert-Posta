@@ -44,9 +44,7 @@ const users = {
 const storage = {
   signals: [],
   botStatus: 'stopped',
-  futureGames: [],
-  liveGames: [],
-  commentatorLogs: []
+  futureGames: []
 };
 
 // Função principal para lidar com APIs
@@ -65,18 +63,6 @@ async function handleAPI(request, env, path) {
     
     if (path === '/api/v1/future-games') {
       return await handleFutureGamesAPI(request, env);
-    }
-    
-    if (path === '/api/v1/live-games') {
-      return await handleLiveGamesAPI(request, env);
-    }
-    
-    if (path === '/api/v1/finished-games') {
-      return await handleFinishedGamesAPI(request, env);
-    }
-    
-    if (path === '/api/v1/commentator') {
-      return await handleCommentatorAPI(request, env);
     }
     
     // Todas as outras rotas requerem autenticação
@@ -135,12 +121,6 @@ async function authenticateUser(request) {
 
 // API para login
 async function handleLoginAPI(request, env) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
   if (request.method === 'POST') {
     try {
       const { email, password } = await request.json();
@@ -194,14 +174,7 @@ async function handleLoginAPI(request, env) {
 
 // API para jogos futuros
 async function handleFutureGamesAPI(request, env) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
   try {
-    // Buscar jogos para os próximos 7 dias, incluindo hoje
     const today = new Date();
     const next7Days = new Date();
     next7Days.setDate(today.getDate() + 7);
@@ -209,52 +182,32 @@ async function handleFutureGamesAPI(request, env) {
     const from = today.toISOString().split('T')[0];
     const to = next7Days.toISOString().split('T')[0];
 
-    console.log('Buscando jogos futuros de:', from, 'até:', to);
+    const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?from=${from}&to=${to}&status=NS`;
 
-    // Buscar jogos para os próximos 7 dias, um dia de cada vez
-    let allFutureGames = [];
-    
-    for (let i = 0; i < 7; i++) {
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + i);
-      const dateStr = targetDate.toISOString().split('T')[0];
-      
-      console.log('Buscando jogos futuros para:', dateStr);
-      
-      const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${dateStr}&status=NS`;
-
-      const response = await fetch(apiFootballUrl, {
-        headers: {
-          'x-rapidapi-key': env.API_FOOTBALL_KEY,
-          'x-rapidapi-host': 'v3.football.api-sports.io'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`API Football response para ${dateStr}:`, data.results, 'jogos');
-        
-        if (data.response && data.response.length > 0) {
-          const dayGames = data.response.map(fixture => ({
-            id: fixture.fixture.id,
-            home_team: fixture.teams.home.name,
-            away_team: fixture.teams.away.name,
-            league: fixture.league.name,
-            league_id: fixture.league.id,
-            date: fixture.fixture.date,
-            country: fixture.league.country
-          }));
-          allFutureGames = allFutureGames.concat(dayGames);
-        }
-      } else {
-        console.error('API Football error para', dateStr, ':', response.status, response.statusText);
+    const response = await fetch(apiFootballUrl, {
+      headers: {
+        'x-rapidapi-key': env.API_FOOTBALL_KEY,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
       }
-    }
-    
-    const futureGames = allFutureGames;
-    console.log('Total jogos futuros encontrados:', futureGames.length);
+    });
 
-    // SEM JOGOS DE EXEMPLO - APENAS DADOS REAIS DA API
+    if (!response.ok) {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+
+    const data = await response.json();
+    const futureGames = data.response ? data.response.map(fixture => ({
+      id: fixture.fixture.id,
+      home_team: fixture.teams.home.name,
+      away_team: fixture.teams.away.name,
+      league: fixture.league.name,
+      league_id: fixture.league.id,
+      date: fixture.fixture.date,
+      country: fixture.league.country
+    })) : [];
 
     return new Response(JSON.stringify(futureGames), {
       status: 200,
@@ -270,208 +223,8 @@ async function handleFutureGamesAPI(request, env) {
   }
 }
 
-// API para jogos ao vivo
-async function handleLiveGamesAPI(request, env) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    console.log('Buscando jogos ao vivo para:', today);
-    
-    const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=LIVE`;
-
-    const response = await fetch(apiFootballUrl, {
-      headers: {
-        'x-rapidapi-key': env.API_FOOTBALL_KEY,
-        'x-rapidapi-host': 'v3.football.api-sports.io'
-      }
-    });
-
-    let liveGames = [];
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('API Football LIVE response:', data);
-      console.log('Number of live fixtures:', data.results);
-      
-      liveGames = data.response ? data.response.map(fixture => ({
-        id: fixture.fixture.id,
-        home_team: fixture.teams.home.name,
-        away_team: fixture.teams.away.name,
-        league: fixture.league.name,
-        league_id: fixture.league.id,
-        status: 'LIVE',
-        minute: fixture.fixture.status.elapsed || 0,
-        home_score: fixture.goals.home,
-        away_score: fixture.goals.away,
-        date: fixture.fixture.date,
-        country: fixture.league.country
-      })) : [];
-      
-      console.log('Processed live games:', liveGames.length);
-    } else {
-      console.error('API Football LIVE error:', response.status, response.statusText);
-    }
-
-        // SEM JOGOS DE EXEMPLO - APENAS DADOS REAIS DA API
-
-        return new Response(JSON.stringify(liveGames), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-        });
-
-      } catch (error) {
-        console.error('Error fetching live games:', error);
-        return new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-        });
-      }
-    }
-
-    // Função para buscar jogos terminados (apenas para atualizar sinais)
-    async function handleFinishedGamesAPI(request, env) {
-      const CORS_HEADERS = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      };
-
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        console.log('Buscando jogos terminados para:', today);
-        
-        const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=FT,AET,PEN`;
-
-        const response = await fetch(apiFootballUrl, {
-          headers: {
-            'x-rapidapi-key': env.API_FOOTBALL_KEY,
-            'x-rapidapi-host': 'v3.football.api-sports.io'
-          }
-        });
-
-        let finishedGames = [];
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('API Football FINISHED response:', data.results, 'jogos');
-          
-          finishedGames = data.response ? data.response.map(fixture => ({
-            id: fixture.fixture.id,
-            home_team: fixture.teams.home.name,
-            away_team: fixture.teams.away.name,
-            league: fixture.league.name,
-            league_id: fixture.league.id,
-            status: 'FINISHED',
-            home_score: fixture.goals.home,
-            away_score: fixture.goals.away,
-            date: fixture.fixture.date,
-            country: fixture.league.country
-          })) : [];
-          
-          console.log('Processed finished games:', finishedGames.length);
-        } else {
-          console.error('API Football FINISHED error:', response.status, response.statusText);
-        }
-
-        return new Response(JSON.stringify(finishedGames), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-        });
-
-      } catch (error) {
-        console.error('Error fetching finished games:', error);
-        return new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-        });
-      }
-    }
-
-// Função para verificar e atualizar sinais automaticamente
-function startSignalUpdateChecker(env) {
-  // Verificar jogos terminados a cada 2 minutos
-  setInterval(async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=FT,AET,PEN`;
-
-      const response = await fetch(apiFootballUrl, {
-        headers: {
-          'x-rapidapi-key': env.API_FOOTBALL_KEY,
-          'x-rapidapi-host': 'v3.football.api-sports.io'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.response && data.response.length > 0) {
-          console.log('Verificando', data.results, 'jogos terminados para atualizar sinais');
-          
-          // Aqui seria a lógica para verificar se algum dos jogos terminados
-          // tem sinais pendentes que precisam ser atualizados com Green/Red
-          // Por agora, apenas logamos
-          addCommentatorLog(`🔄 Verificando ${data.results} jogos terminados para atualizar sinais`, 'info');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao verificar jogos terminados:', error);
-    }
-  }, 120000); // A cada 2 minutos
-}
-
-// API para painel do comentador
-async function handleCommentatorAPI(request, env) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
-  if (request.method === 'GET') {
-    return new Response(JSON.stringify(storage.commentatorLogs), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
-  }
-
-  if (request.method === 'POST') {
-    const { message, type = 'info' } = await request.json();
-    const logEntry = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      message,
-      type
-    };
-    storage.commentatorLogs.push(logEntry);
-    
-    // Manter apenas os últimos 100 logs
-    if (storage.commentatorLogs.length > 100) {
-      storage.commentatorLogs = storage.commentatorLogs.slice(-100);
-    }
-    
-    return new Response(JSON.stringify({ success: true, log: logEntry }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
-  }
-
-  return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
-}
-
 // API para sinais
 async function handleSignalsAPI(request, env, user) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
   const signals = storage.signals;
   
   return new Response(JSON.stringify(signals), {
@@ -482,24 +235,12 @@ async function handleSignalsAPI(request, env, user) {
 
 // API para controlo do bot
 async function handleBotControlAPI(request, env, user) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
   if (request.method === 'POST') {
     const { action } = await request.json();
     
     if (action === 'start') {
       storage.botStatus = 'running';
-      // Adicionar log ao comentador
-      addCommentatorLog('🤖 Bot iniciado - Enviando sinais em tempo real', 'success');
-      
-      // Iniciar verificação automática de jogos terminados para atualizar sinais
-      startSignalUpdateChecker(env);
-      
-      return new Response(JSON.stringify({ success: true, message: 'Bot iniciado - Enviando sinais em tempo real' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Bot iniciado com sucesso' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
       });
@@ -507,22 +248,14 @@ async function handleBotControlAPI(request, env, user) {
     
     if (action === 'stop') {
       storage.botStatus = 'stopped';
-      // Adicionar log ao comentador
-      addCommentatorLog('⏹️ Bot parado - Sinais suspensos', 'warning');
-      return new Response(JSON.stringify({ success: true, message: 'Bot parado - Sinais suspensos' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Bot parado com sucesso' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
       });
     }
     
     if (action === 'analyze') {
-      // Adicionar log ao comentador
-      addCommentatorLog('🔍 Análise de jogos iniciada (sem envio de sinais)', 'info');
-      // Simular análise
-      setTimeout(() => {
-        addCommentatorLog('✅ Análise concluída - 5 jogos analisados', 'success');
-      }, 2000);
-      return new Response(JSON.stringify({ success: true, message: 'Análise iniciada - Apenas análise, sem envio de sinais' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Análise concluída' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
       });
@@ -537,12 +270,6 @@ async function handleBotControlAPI(request, env, user) {
 
 // API para estatísticas
 async function handleStatsAPI(request, env, user) {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-
   const stats = {
     signals: {
       total: storage.signals.length,
@@ -560,22 +287,6 @@ async function handleStatsAPI(request, env, user) {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
   });
-}
-
-// Função auxiliar para adicionar logs ao comentador
-function addCommentatorLog(message, type = 'info') {
-  const logEntry = {
-    id: Date.now().toString(),
-    timestamp: new Date().toISOString(),
-    message,
-    type
-  };
-  storage.commentatorLogs.push(logEntry);
-  
-  // Manter apenas os últimos 100 logs
-  if (storage.commentatorLogs.length > 100) {
-    storage.commentatorLogs = storage.commentatorLogs.slice(-100);
-  }
 }
 
 // HTML do Dashboard Simples
@@ -661,20 +372,7 @@ function getSimpleDashboardHTML() {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <!-- Live Games -->
-                    <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">🔴 Jogos ao Vivo</h2>
-                            <button id="refreshLiveGames" class="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 text-sm">
-                                🔄 Atualizar
-                            </button>
-                        </div>
-                        <div id="live-games-list" class="space-y-2 max-h-96 overflow-y-auto">
-                            <div class="text-center text-gray-400 py-4">Carregando jogos ao vivo...</div>
-                        </div>
-                    </div>
-
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Future Games -->
                     <div class="bg-gray-800 rounded-lg shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4">
@@ -683,10 +381,7 @@ function getSimpleDashboardHTML() {
                                 🔄 Atualizar
                             </button>
                         </div>
-                        <div class="mb-4">
-                            <input type="text" id="gameSearch" placeholder="Pesquisar jogos..." class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm">
-                        </div>
-                        <div id="future-games-list" class="space-y-2 max-h-80 overflow-y-auto">
+                        <div id="future-games-list" class="space-y-2 max-h-96 overflow-y-auto">
                             <div class="text-center text-gray-400 py-4">Carregando jogos...</div>
                         </div>
                     </div>
@@ -697,19 +392,6 @@ function getSimpleDashboardHTML() {
                         <div id="signals-list" class="space-y-2 max-h-96 overflow-y-auto">
                             <div class="text-center text-gray-400 py-4">Nenhum sinal enviado</div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Commentator Panel -->
-                <div class="bg-gray-800 rounded-lg shadow-sm p-6 mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold">🎙️ Painel do Comentador</h2>
-                        <button id="clearCommentator" class="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 text-sm">
-                            🗑️ Limpar
-                        </button>
-                    </div>
-                    <div id="commentator-panel" class="bg-black rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm">
-                        <div class="text-gray-400">Sistema iniciado - Aguardando ações...</div>
                     </div>
                 </div>
 
@@ -761,12 +443,6 @@ function getSimpleDashboardHTML() {
             document.getElementById('authModal').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             document.getElementById('userInfo').textContent = currentUser.role.toUpperCase();
-            
-            // Adicionar log inicial ao comentador
-            addCommentatorLog('🎯 Sistema Alert@Postas iniciado com sucesso', 'success');
-            addCommentatorLog('👤 Utilizador autenticado: ' + currentUser.role.toUpperCase(), 'info');
-            addCommentatorLog('🔍 Carregando dados do sistema...', 'info');
-            
             loadData();
         }
 
@@ -813,31 +489,10 @@ function getSimpleDashboardHTML() {
             });
 
             document.getElementById('logoutBtn').addEventListener('click', logout);
-            
-            // Botões do bot
-            const startBot = document.getElementById('startBot');
-            const stopBot = document.getElementById('stopBot');
-            const analyzeGames = document.getElementById('analyzeGames');
-            
-            if (startBot) startBot.addEventListener('click', () => botAction('start'));
-            if (stopBot) stopBot.addEventListener('click', () => botAction('stop'));
-            if (analyzeGames) analyzeGames.addEventListener('click', () => botAction('analyze'));
-            
-            // Botões de refresh
-            const refreshGames = document.getElementById('refreshGames');
-            const refreshLiveGames = document.getElementById('refreshLiveGames');
-            
-            if (refreshGames) refreshGames.addEventListener('click', loadFutureGames);
-            if (refreshLiveGames) refreshLiveGames.addEventListener('click', loadLiveGames);
-            
-            // Pesquisa e comentador
-            const gameSearch = document.getElementById('gameSearch');
-            const clearCommentator = document.getElementById('clearCommentator');
-            
-            if (gameSearch) gameSearch.addEventListener('input', filterGames);
-            if (clearCommentator) clearCommentator.addEventListener('click', function() {
-                document.getElementById('commentator-panel').innerHTML = '<div class="text-gray-400">Logs limpos</div>';
-            });
+            document.getElementById('startBot').addEventListener('click', () => botAction('start'));
+            document.getElementById('stopBot').addEventListener('click', () => botAction('stop'));
+            document.getElementById('analyzeGames').addEventListener('click', () => botAction('analyze'));
+            document.getElementById('refreshGames').addEventListener('click', loadFutureGames);
         }
 
         async function botAction(action) {
@@ -892,10 +547,8 @@ function getSimpleDashboardHTML() {
             if (!authToken) return;
             
             await Promise.all([
-                loadLiveGames(),
                 loadFutureGames(),
-                loadStats(),
-                loadCommentatorLogs()
+                loadStats()
             ]);
         }
 
@@ -935,12 +588,12 @@ function getSimpleDashboardHTML() {
                 return;
             }
 
-            const gamesHtml = games.slice(0, 20).map(game => {
+            const gamesHtml = games.slice(0, 10).map(game => {
                 const gameDate = new Date(game.date).toLocaleDateString('pt-PT');
                 const gameTime = new Date(game.date).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
                 
                 return \`
-                    <div class="game-item p-3 bg-gray-700 rounded-lg">
+                    <div class="p-3 bg-gray-700 rounded-lg">
                         <div class="font-semibold text-sm">\${game.home_team} vs \${game.away_team}</div>
                         <div class="text-xs text-gray-400">\${game.league} - \${gameDate} às \${gameTime}</div>
                     </div>
@@ -956,113 +609,6 @@ function getSimpleDashboardHTML() {
             document.getElementById('redSignals').textContent = stats.signals.reds;
             document.getElementById('pendingSignals').textContent = stats.signals.pending;
         }
-
-        // Funções para jogos ao vivo
-        async function loadLiveGames() {
-            if (!authToken) return;
-
-            try {
-                const response = await fetch('/api/v1/live-games', {
-                    headers: { 'Authorization': 'Bearer ' + authToken }
-                });
-                const games = await response.json();
-                displayLiveGames(games);
-            } catch (error) {
-                console.error('Error loading live games:', error);
-            }
-        }
-
-        function displayLiveGames(games) {
-            const container = document.getElementById('live-games-list');
-            
-            if (games.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-4">Nenhum jogo ao vivo</div>';
-                return;
-            }
-
-            const gamesHtml = games.map(game => {
-                return \`
-                    <div class="p-3 bg-red-900 border border-red-700 rounded-lg">
-                        <div class="font-semibold text-sm text-red-100">\${game.home_team} vs \${game.away_team}</div>
-                        <div class="text-xs text-red-300">\${game.league} - \${game.minute}'</div>
-                        <div class="text-sm font-bold text-red-100 mt-1">\${game.home_score} - \${game.away_score}</div>
-                    </div>
-                \`;
-            }).join('');
-
-            container.innerHTML = gamesHtml;
-        }
-
-        // Funções para comentador
-        async function loadCommentatorLogs() {
-            if (!authToken) return;
-
-            try {
-                const response = await fetch('/api/v1/commentator', {
-                    headers: { 'Authorization': 'Bearer ' + authToken }
-                });
-                const logs = await response.json();
-                displayCommentatorLogs(logs);
-            } catch (error) {
-                console.error('Error loading commentator logs:', error);
-            }
-        }
-
-        function displayCommentatorLogs(logs) {
-            const container = document.getElementById('commentator-panel');
-            
-            if (logs.length === 0) {
-                container.innerHTML = '<div class="text-gray-400">Sistema iniciado - Aguardando ações...</div>';
-                return;
-            }
-
-            const logsHtml = logs.map(log => {
-                const time = new Date(log.timestamp).toLocaleTimeString('pt-PT');
-                const colorClass = log.type === 'success' ? 'text-green-400' : 
-                                 log.type === 'warning' ? 'text-yellow-400' : 
-                                 log.type === 'error' ? 'text-red-400' : 'text-blue-400';
-                
-                return \`<div class="\${colorClass}">[\${time}] \${log.message}</div>\`;
-            }).join('');
-
-            container.innerHTML = logsHtml;
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // Função de pesquisa
-        function filterGames() {
-            const searchTerm = document.getElementById('gameSearch').value.toLowerCase();
-            const container = document.getElementById('future-games-list');
-            const gameElements = container.querySelectorAll('.game-item');
-            
-            gameElements.forEach(element => {
-                const gameText = element.textContent.toLowerCase();
-                if (gameText.includes(searchTerm)) {
-                    element.style.display = 'block';
-                } else {
-                    element.style.display = 'none';
-                }
-            });
-        }
-
-        // Função para adicionar logs ao comentador (frontend)
-        async function addCommentatorLog(message, type = 'info') {
-            try {
-                await fetch('/api/v1/commentator', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + authToken
-                    },
-                    body: JSON.stringify({ message, type })
-                });
-            } catch (error) {
-                console.error('Error adding commentator log:', error);
-            }
-        }
-
-        // Atualizar comentador a cada 5 segundos
-        setInterval(loadCommentatorLogs, 5000);
     </script>
 </body>
 </html>`;

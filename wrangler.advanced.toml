@@ -1,5 +1,5 @@
-name = "alertapostas"
-main = "src/index-working.js"
+name = "alertapostas-advanced"
+main = "src/index-advanced.js"
 compatibility_date = "2025-09-17"
 compatibility_flags = ["nodejs_compat"]
 
@@ -10,3 +10,8 @@ API_BASE_URL = "https://alertapostas-backend.ecarvalho140.workers.dev"
 API_FOOTBALL_KEY = "623ead667fb69f339d1e8f9a366de721"
 TELEGRAM_TOKEN = "8031960776:AAFmB-UhPTfj3YauD6PPkjQW2VTsngJ3AIU"
 TELEGRAM_GROUP_ID = "-1002937302746"
+
+# Configurações do sistema
+SIGNAL_THRESHOLD = "85"
+DAILY_REPORT_TIME = "23:59"
+MAX_SIGNALS_PER_DAY = "50"

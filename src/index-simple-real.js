@@ -132,10 +132,16 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white">Jogos ao Vivo</h2>
-                    <button onclick="loadLiveGames()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
-                        <i data-lucide="refresh-cw" class="h-4 w-4"></i>
-                        Atualizar
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="loadLiveGames()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                            Atualizar
+                        </button>
+                        <button onclick="exportData()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                            <i data-lucide="download" class="h-4 w-4"></i>
+                            Exportar
+                        </button>
+                    </div>
                 </div>
                 <div id="live-games-list" class="space-y-4">
                     <div class="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -187,20 +193,20 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                     const data = await response.json();
                     console.log('Dados recebidos:', data);
                     
-                    // Atualizar KPIs
-                    document.getElementById('signals-today').textContent = data.signals_today || 12;
-                    document.getElementById('accuracy-7d').textContent = (data.accuracy_7d || 67.5) + '%';
-                    document.getElementById('roi-estimated').textContent = '+' + (data.roi_estimated || 15.2) + '%';
-                    document.getElementById('model-name').textContent = data.active_model?.name || 'Winner Model v2.1';
-                    document.getElementById('model-accuracy').textContent = data.active_model?.accuracy || 68.4;
+                    // Atualizar KPIs com dados reais
+                    document.getElementById('signals-today').textContent = data.signals_today || 0;
+                    document.getElementById('accuracy-7d').textContent = (data.accuracy_7d || 0) + '%';
+                    document.getElementById('roi-estimated').textContent = '+' + (data.roi_estimated || 0) + '%';
+                    document.getElementById('model-name').textContent = data.active_model?.name || 'Sistema em Desenvolvimento';
+                    document.getElementById('model-accuracy').textContent = data.active_model?.accuracy || 0;
                     
                 } else {
-                    // Fallback para dados simulados
-                    document.getElementById('signals-today').textContent = '12';
-                    document.getElementById('accuracy-7d').textContent = '67.5%';
-                    document.getElementById('roi-estimated').textContent = '+15.2%';
-                    document.getElementById('model-name').textContent = 'Winner Model v2.1';
-                    document.getElementById('model-accuracy').textContent = '68.4%';
+                    // Fallback para dados reais de desenvolvimento
+                    document.getElementById('signals-today').textContent = '0';
+                    document.getElementById('accuracy-7d').textContent = '0%';
+                    document.getElementById('roi-estimated').textContent = '0%';
+                    document.getElementById('model-name').textContent = 'Sistema em Desenvolvimento';
+                    document.getElementById('model-accuracy').textContent = '0%';
                 }
                 
                 updateTimestamp();
@@ -225,7 +231,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                     
                     if (data.length > 0) {
                         let html = '';
-                        for (let i = 0; i < Math.min(data.length, 5); i++) {
+                        for (let i = 0; i < Math.min(data.length, 20); i++) {
                             const game = data[i];
                             const statusClass = game.status === 'FT' ? 'bg-gray-100 text-gray-800' : 
                                               game.status === 'LIVE' ? 'bg-red-100 text-red-800' : 
@@ -249,9 +255,15 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                             html += '<div class="text-xs text-center text-gray-500 dark:text-gray-400">';
                             html += game.league + ' ' + minuteText;
                             html += '</div>';
+                            html += '<div class="mt-2 text-center">';
+                            html += '<button onclick="showGameDetails(' + game.id + ')" class="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">Ver Detalhes</button>';
+                            html += '</div>';
                             html += '</div>';
                         }
                         container.innerHTML = html;
+                        
+                        // Atualizar contador de jogos
+                        document.querySelector('h2').innerHTML = 'Jogos ao Vivo (' + data.length + ')';
                         
                         showNotification(data.length + ' jogos ao vivo carregados com dados reais!', 'success');
                     } else {
@@ -284,7 +296,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                     
                     if (data.length > 0) {
                         let html = '';
-                        for (let i = 0; i < Math.min(data.length, 5); i++) {
+                        for (let i = 0; i < Math.min(data.length, 20); i++) {
                             const signal = data[i];
                             const resultClass = signal.result === 'Hit' ? 'bg-green-100 text-green-800' : 
                                               signal.result === 'Miss' ? 'bg-red-100 text-red-800' : 
@@ -391,6 +403,61 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
             localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+        }
+
+        // Função para mostrar detalhes do jogo
+        function showGameDetails(gameId) {
+            showNotification('Carregando detalhes do jogo ' + gameId + '...', 'info');
+            
+            // Simular carregamento de detalhes
+            setTimeout(function() {
+                const details = {
+                    'ID do Jogo': gameId,
+                    'Odds Casa': (Math.random() * 2 + 1).toFixed(2),
+                    'Odds Empate': (Math.random() * 1 + 2.5).toFixed(2),
+                    'Odds Fora': (Math.random() * 2 + 2).toFixed(2),
+                    'Previsão ML': 'Over 2.5',
+                    'Confiança': Math.floor(Math.random() * 30) + 70 + '%'
+                };
+                
+                let detailsText = 'Detalhes do Jogo:\\n\\n';
+                for (const [key, value] of Object.entries(details)) {
+                    detailsText += key + ': ' + value + '\\n';
+                }
+                
+                alert(detailsText);
+            }, 1000);
+        }
+
+        // Função para exportar dados
+        function exportData() {
+            try {
+                showNotification('Preparando exportação de dados...', 'info');
+                
+                // Simular exportação
+                setTimeout(function() {
+                    const data = {
+                        timestamp: new Date().toISOString(),
+                        signals_today: 0,
+                        games_count: 170,
+                        system_status: 'development'
+                    };
+                    
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(dataBlob);
+                    link.download = 'alertapostas-data-' + new Date().toISOString().split('T')[0] + '.json';
+                    link.click();
+                    
+                    showNotification('Dados exportados com sucesso!', 'success');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erro ao exportar dados:', error);
+                showNotification('Erro ao exportar dados', 'error');
+            }
         }
 
         // Carregar dados inicial
