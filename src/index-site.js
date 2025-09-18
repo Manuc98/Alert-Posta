@@ -59,7 +59,15 @@ const storage = {
   botStatus: 'stopped',
   futureGames: [],
   liveGames: [],
-  commentatorLogs: []
+  commentatorLogs: [],
+  signalTracking: [], // Para tracking de sinais e relatórios
+  dailyStats: {
+    date: null,
+    totalSignals: 0,
+    greenSignals: 0,
+    redSignals: 0,
+    pendingSignals: 0
+  }
 };
 
 // Função principal para lidar com APIs
@@ -85,6 +93,10 @@ async function handleAPI(request, env, path) {
       return await handleFinishedGamesAPI(request, env);
     }
     
+    if (path === '/api/v1/past-games') {
+      return await handlePastGamesAPI(request, env);
+    }
+    
     if (path === '/api/v1/commentator') {
       return await handleCommentatorAPI(request, env);
     }
@@ -100,6 +112,10 @@ async function handleAPI(request, env, path) {
     
     if (path === '/api/v1/stats') {
       return await handleStatsAPI(request, env);
+    }
+    
+    if (path === '/api/v1/daily-report') {
+      return await handleDailyReportAPI(request, env);
     }
 
     // Endpoints de utilizadores removidos - SISTEMA SEM AUTENTICAÇÃO
@@ -311,8 +327,87 @@ async function handleLiveGamesAPI(request, env) {
           status: 200,
           headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
         });
+    }
+}
+
+// API para jogos passados (últimos 7 dias)
+async function handlePastGamesAPI(request, env) {
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  try {
+    const url = new URL(request.url);
+    const days = parseInt(url.searchParams.get('days')) || 7; // Padrão: últimos 7 dias
+    
+    console.log(`Buscando jogos passados dos últimos ${days} dias...`);
+    addCommentatorLog(`📅 Buscando jogos passados dos últimos ${days} dias`, 'info');
+
+    let allPastGames = [];
+    
+    for (let i = 0; i < days; i++) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() - i);
+      const dateStr = targetDate.toISOString().split('T')[0];
+      
+      console.log('Buscando jogos passados para:', dateStr);
+      
+      // Buscar jogos terminados (FT, AET, PEN)
+      const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${dateStr}&status=FT,AET,PEN&timezone=Europe/Lisbon`;
+
+      const response = await fetch(apiFootballUrl, {
+        headers: {
+          'x-rapidapi-key': env.API_FOOTBALL_KEY,
+          'x-rapidapi-host': 'v3.football.api-sports.io'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`API Football PAST response para ${dateStr}:`, data.results, 'jogos');
+        
+        if (data.response && data.response.length > 0) {
+          const dayGames = data.response.map(fixture => ({
+            id: fixture.fixture.id,
+            home_team: fixture.teams.home.name,
+            away_team: fixture.teams.away.name,
+            league: fixture.league.name,
+            league_id: fixture.league.id,
+            date: fixture.fixture.date,
+            country: fixture.league.country,
+            status: 'FINISHED',
+            home_score: fixture.goals.home,
+            away_score: fixture.goals.away,
+            result: fixture.fixture.status.short
+          }));
+          allPastGames = allPastGames.concat(dayGames);
+        }
+      } else {
+        console.error('API Football PAST error para', dateStr, ':', response.status, response.statusText);
+        const errorData = await response.text();
+        console.error('Error details:', errorData);
       }
     }
+    
+    console.log('Total jogos passados encontrados:', allPastGames.length);
+    addCommentatorLog(`📊 ${allPastGames.length} jogos passados carregados da API Football`, 'info');
+
+    return new Response(JSON.stringify(allPastGames), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+
+  } catch (error) {
+    console.error('Error fetching past games:', error);
+    addCommentatorLog(`❌ Erro ao carregar jogos passados: ${error.message}`, 'error');
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
 
 // Função para verificar e atualizar sinais automaticamente
 function startSignalUpdateChecker(env) {
@@ -335,10 +430,66 @@ function startSignalUpdateChecker(env) {
         if (data.response && data.response.length > 0) {
           console.log('Verificando', data.results, 'jogos terminados para atualizar sinais');
           
-          // Aqui seria a lógica para verificar se algum dos jogos terminados
-          // tem sinais pendentes que precisam ser atualizados com Green/Red
-          // Por agora, apenas logamos
-          addCommentatorLog(`🔄 Verificando ${data.results} jogos terminados para atualizar sinais`, 'info');
+          // Verificar sinais pendentes e atualizar status
+          for (const finishedGame of data.response) {
+            const gameId = finishedGame.fixture.id;
+            const pendingSignals = storage.signals.filter(signal => 
+              signal.gameId === gameId && signal.status === 'pending'
+            );
+            
+            if (pendingSignals.length > 0) {
+              // Determinar resultado do jogo
+              const homeScore = finishedGame.goals.home;
+              const awayScore = finishedGame.goals.away;
+              
+              for (const signal of pendingSignals) {
+                let newStatus = 'red'; // Default para red
+                
+                // Lógica simples para determinar green/red baseado na previsão
+                if (signal.prediction) {
+                  const prediction = signal.prediction.toLowerCase();
+                  
+                  if (prediction.includes('over') && (homeScore + awayScore) > signal.overUnder) {
+                    newStatus = 'green';
+                  } else if (prediction.includes('under') && (homeScore + awayScore) < signal.overUnder) {
+                    newStatus = 'green';
+                  } else if (prediction.includes('home') && homeScore > awayScore) {
+                    newStatus = 'green';
+                  } else if (prediction.includes('away') && awayScore > homeScore) {
+                    newStatus = 'green';
+                  } else if (prediction.includes('draw') && homeScore === awayScore) {
+                    newStatus = 'green';
+                  }
+                }
+                
+                // Atualizar sinal
+                signal.status = newStatus;
+                signal.home_score = homeScore;
+                signal.away_score = awayScore;
+                signal.updated_at = new Date().toISOString();
+                
+                // Enviar atualização para Telegram
+                await updateSignalInTelegram(env, signal, newStatus);
+                
+                // Adicionar ao tracking
+                storage.signalTracking.push({
+                  id: Date.now().toString(),
+                  type: 'signal_update',
+                  signalId: signal.id,
+                  gameId: gameId,
+                  oldStatus: 'pending',
+                  newStatus: newStatus,
+                  homeScore,
+                  awayScore,
+                  timestamp: new Date().toISOString()
+                });
+                
+                addCommentatorLog(`🔄 Sinal atualizado: ${signal.home_team} vs ${signal.away_team} - ${newStatus.toUpperCase()}`, 'info');
+              }
+            }
+          }
+          
+          addCommentatorLog(`🔄 Verificados ${data.results} jogos terminados - ${storage.signals.filter(s => s.status === 'pending').length} sinais pendentes`, 'info');
         }
       }
     } catch (error) {
@@ -401,13 +552,67 @@ async function checkFinishedGames(env) {
 async function generateDailyReport(env) {
   try {
     console.log('Cron: Gerando relatório diário...');
-    addCommentatorLog('📊 Cron: Gerando relatório diário às 23:00', 'info');
+    addCommentatorLog('📊 Cron: Gerando relatório diário às 23:59', 'info');
     
-    // Aqui seria a lógica para gerar o relatório diário
-    // Por agora, apenas logamos
-    addCommentatorLog('✅ Relatório diário gerado com sucesso', 'success');
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Calcular estatísticas do dia
+    const todaySignals = storage.signals.filter(signal => {
+      const signalDate = new Date(signal.date).toISOString().split('T')[0];
+      return signalDate === today;
+    });
+    
+    const greenCount = todaySignals.filter(s => s.status === 'green').length;
+    const redCount = todaySignals.filter(s => s.status === 'red').length;
+    const pendingCount = todaySignals.filter(s => s.status === 'pending').length;
+    const totalCount = todaySignals.length;
+    
+    // Atualizar estatísticas diárias
+    storage.dailyStats = {
+      date: today,
+      totalSignals: totalCount,
+      greenSignals: greenCount,
+      redSignals: redCount,
+      pendingSignals: pendingCount
+    };
+    
+    // Gerar relatório
+    const winRate = totalCount > 0 ? ((greenCount / totalCount) * 100).toFixed(1) : 0;
+    
+    const reportMessage = `📊 <b>RELATÓRIO DIÁRIO - ${today}</b>\n\n` +
+                         `🎯 <b>Resumo do Dia:</b>\n` +
+                         `📈 Total de Sinais: ${totalCount}\n` +
+                         `🟢 Greens: ${greenCount}\n` +
+                         `🔴 Reds: ${redCount}\n` +
+                         `🟡 Pendentes: ${pendingCount}\n\n` +
+                         `📊 <b>Taxa de Acerto:</b> ${winRate}%\n\n` +
+                         `⏰ <b>Gerado em:</b> ${new Date().toLocaleString('pt-PT')}\n\n` +
+                         `🤖 <i>Alert@Postas - Sistema Automático</i>`;
+    
+    // Enviar para Telegram
+    const telegramSent = await sendTelegramMessage(env, reportMessage);
+    
+    if (telegramSent) {
+      addCommentatorLog('✅ Relatório diário enviado para Telegram com sucesso', 'success');
+    } else {
+      addCommentatorLog('❌ Erro ao enviar relatório diário para Telegram', 'error');
+    }
+    
+    // Adicionar ao tracking
+    storage.signalTracking.push({
+      id: Date.now().toString(),
+      type: 'daily_report',
+      date: today,
+      stats: storage.dailyStats,
+      telegramSent,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log('Relatório diário gerado:', storage.dailyStats);
+    
   } catch (error) {
     console.error('Erro no cron generateDailyReport:', error);
+    addCommentatorLog(`❌ Erro ao gerar relatório diário: ${error.message}`, 'error');
   }
 }
 
@@ -548,6 +753,63 @@ async function handleStatsAPI(request, env) {
   });
 }
 
+// API para relatório diário
+async function handleDailyReportAPI(request, env) {
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  try {
+    const url = new URL(request.url);
+    const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
+    
+    // Buscar relatórios do dia especificado
+    const dayReports = storage.signalTracking.filter(track => 
+      track.type === 'daily_report' && track.date === date
+    );
+    
+    // Buscar sinais do dia
+    const daySignals = storage.signals.filter(signal => {
+      const signalDate = new Date(signal.date).toISOString().split('T')[0];
+      return signalDate === date;
+    });
+    
+    const greenCount = daySignals.filter(s => s.status === 'green').length;
+    const redCount = daySignals.filter(s => s.status === 'red').length;
+    const pendingCount = daySignals.filter(s => s.status === 'pending').length;
+    const totalCount = daySignals.length;
+    const winRate = totalCount > 0 ? ((greenCount / totalCount) * 100).toFixed(1) : 0;
+    
+    const report = {
+      date,
+      stats: {
+        totalSignals: totalCount,
+        greenSignals: greenCount,
+        redSignals: redCount,
+        pendingSignals: pendingCount,
+        winRate: parseFloat(winRate)
+      },
+      signals: daySignals,
+      reports: dayReports,
+      generated_at: new Date().toISOString()
+    };
+    
+    return new Response(JSON.stringify(report), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+
+  } catch (error) {
+    console.error('Error fetching daily report:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
 // Função auxiliar para adicionar logs ao comentador
 function addCommentatorLog(message, type = 'info') {
   const logEntry = {
@@ -561,6 +823,59 @@ function addCommentatorLog(message, type = 'info') {
   // Manter apenas os últimos 100 logs
   if (storage.commentatorLogs.length > 100) {
     storage.commentatorLogs = storage.commentatorLogs.slice(-100);
+  }
+}
+
+// Função para enviar mensagem para o Telegram
+async function sendTelegramMessage(env, message, parseMode = 'HTML') {
+  try {
+    const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`;
+    
+    const response = await fetch(telegramUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: env.TELEGRAM_GROUP_ID,
+        text: message,
+        parse_mode: parseMode
+      })
+    });
+
+    if (response.ok) {
+      console.log('Mensagem enviada para Telegram com sucesso');
+      return true;
+    } else {
+      const errorData = await response.text();
+      console.error('Erro ao enviar para Telegram:', response.status, errorData);
+      return false;
+    }
+  } catch (error) {
+    console.error('Erro na função sendTelegramMessage:', error);
+    return false;
+  }
+}
+
+// Função para atualizar sinal no Telegram
+async function updateSignalInTelegram(env, signal, newStatus) {
+  try {
+    const statusEmoji = newStatus === 'green' ? '🟢' : newStatus === 'red' ? '🔴' : '🟡';
+    const statusText = newStatus === 'green' ? 'GREEN' : newStatus === 'red' ? 'RED' : 'PENDING';
+    
+    const message = `📊 <b>ATUALIZAÇÃO DE SINAL</b>\n\n` +
+                   `🎯 <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
+                   `🏆 <b>Liga:</b> ${signal.league}\n` +
+                   `📅 <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
+                   `⚽ <b>Resultado:</b> ${signal.home_score || 0} - ${signal.away_score || 0}\n` +
+                   `🎯 <b>Previsão:</b> ${signal.prediction || 'N/A'}\n` +
+                   `📈 <b>Status:</b> ${statusEmoji} ${statusText}\n` +
+                   `⏰ <b>Atualizado:</b> ${new Date().toLocaleString('pt-PT')}`;
+
+    return await sendTelegramMessage(env, message);
+  } catch (error) {
+    console.error('Erro ao atualizar sinal no Telegram:', error);
+    return false;
   }
 }
 
