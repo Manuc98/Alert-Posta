@@ -219,57 +219,124 @@ async function handleLiveGamesAPI(request, env) {
   try {
     const today = new Date().toISOString().split('T')[0];
     console.log('Buscando jogos ao vivo para:', today);
+    addCommentatorLog(`🔴 Buscando jogos ao vivo para ${today}`, 'info');
     
-    const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=LIVE`;
-
-    const response = await fetch(apiFootballUrl, {
+    let liveGames = [];
+    
+    // Buscar jogos ao vivo (LIVE)
+    const liveUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=LIVE&timezone=Europe/Lisbon`;
+    const liveResponse = await fetch(liveUrl, {
       headers: {
         'x-rapidapi-key': env.API_FOOTBALL_KEY,
         'x-rapidapi-host': 'v3.football.api-sports.io'
       }
     });
 
-    let liveGames = [];
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('API Football LIVE response:', data);
-      console.log('Number of live fixtures:', data.results);
+    if (liveResponse.ok) {
+      const liveData = await liveResponse.json();
+      console.log('API Football LIVE response:', liveData.results, 'jogos');
+      addCommentatorLog(`📊 API Football LIVE: ${liveData.results} jogos encontrados`, 'info');
       
-      liveGames = data.response ? data.response.map(fixture => ({
-        id: fixture.fixture.id,
-        home_team: fixture.teams.home.name,
-        away_team: fixture.teams.away.name,
-        league: fixture.league.name,
-        league_id: fixture.league.id,
-        status: 'LIVE',
-        minute: fixture.fixture.status.elapsed || 0,
-        home_score: fixture.goals.home,
-        away_score: fixture.goals.away,
-        date: fixture.fixture.date,
-        country: fixture.league.country
-      })) : [];
-      
-      console.log('Processed live games:', liveGames.length);
-    } else {
-      console.error('API Football LIVE error:', response.status, response.statusText);
-    }
-
-        // SEM JOGOS DE EXEMPLO - APENAS DADOS REAIS DA API
-
-        return new Response(JSON.stringify(liveGames), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-        });
-
-      } catch (error) {
-        console.error('Error fetching live games:', error);
-        return new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-        });
+      if (liveData.response && liveData.response.length > 0) {
+        const liveGamesData = liveData.response.map(fixture => ({
+          id: fixture.fixture.id,
+          home_team: fixture.teams.home.name,
+          away_team: fixture.teams.away.name,
+          league: fixture.league.name,
+          league_id: fixture.league.id,
+          status: 'LIVE',
+          minute: fixture.fixture.status.elapsed || 0,
+          home_score: fixture.goals.home,
+          away_score: fixture.goals.away,
+          date: fixture.fixture.date,
+          country: fixture.league.country
+        }));
+        liveGames = liveGames.concat(liveGamesData);
       }
     }
+
+    // Buscar jogos no 1º tempo (1H)
+    const firstHalfUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=1H&timezone=Europe/Lisbon`;
+    const firstHalfResponse = await fetch(firstHalfUrl, {
+      headers: {
+        'x-rapidapi-key': env.API_FOOTBALL_KEY,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    });
+
+    if (firstHalfResponse.ok) {
+      const firstHalfData = await firstHalfResponse.json();
+      console.log('API Football 1H response:', firstHalfData.results, 'jogos');
+      addCommentatorLog(`📊 API Football 1H: ${firstHalfData.results} jogos encontrados`, 'info');
+      
+      if (firstHalfData.response && firstHalfData.response.length > 0) {
+        const firstHalfGames = firstHalfData.response.map(fixture => ({
+          id: fixture.fixture.id,
+          home_team: fixture.teams.home.name,
+          away_team: fixture.teams.away.name,
+          league: fixture.league.name,
+          league_id: fixture.league.id,
+          status: 'LIVE',
+          minute: fixture.fixture.status.elapsed || 0,
+          home_score: fixture.goals.home,
+          away_score: fixture.goals.away,
+          date: fixture.fixture.date,
+          country: fixture.league.country
+        }));
+        liveGames = liveGames.concat(firstHalfGames);
+      }
+    }
+
+    // Buscar jogos no 2º tempo (2H)
+    const secondHalfUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=2H&timezone=Europe/Lisbon`;
+    const secondHalfResponse = await fetch(secondHalfUrl, {
+      headers: {
+        'x-rapidapi-key': env.API_FOOTBALL_KEY,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    });
+
+    if (secondHalfResponse.ok) {
+      const secondHalfData = await secondHalfResponse.json();
+      console.log('API Football 2H response:', secondHalfData.results, 'jogos');
+      addCommentatorLog(`📊 API Football 2H: ${secondHalfData.results} jogos encontrados`, 'info');
+      
+      if (secondHalfData.response && secondHalfData.response.length > 0) {
+        const secondHalfGames = secondHalfData.response.map(fixture => ({
+          id: fixture.fixture.id,
+          home_team: fixture.teams.home.name,
+          away_team: fixture.teams.away.name,
+          league: fixture.league.name,
+          league_id: fixture.league.id,
+          status: 'LIVE',
+          minute: fixture.fixture.status.elapsed || 0,
+          home_score: fixture.goals.home,
+          away_score: fixture.goals.away,
+          date: fixture.fixture.date,
+          country: fixture.league.country
+        }));
+        liveGames = liveGames.concat(secondHalfGames);
+      }
+    }
+
+    console.log('Total live games processed:', liveGames.length);
+    addCommentatorLog(`⚽ ${liveGames.length} jogos ao vivo processados no total`, 'info');
+
+
+    return new Response(JSON.stringify(liveGames), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+
+  } catch (error) {
+    console.error('Error fetching live games:', error);
+    addCommentatorLog(`❌ Erro ao buscar jogos ao vivo: ${error.message}`, 'error');
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
 
     // Função para buscar jogos terminados (apenas para atualizar sinais)
     async function handleFinishedGamesAPI(request, env) {
