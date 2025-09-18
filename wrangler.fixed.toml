@@ -1,5 +1,5 @@
-name = "alertapostas-clean"
-main = "src/index-clean.js"
+name = "alertapostas-fixed"
+main = "src/index-working-fixed.js"
 compatibility_date = "2025-09-18"
 compatibility_flags = ["nodejs_compat"]
 

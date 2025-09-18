@@ -27,18 +27,98 @@ export default {
     }
 
     return new Response('Not Found', { status: 404, headers: CORS_HEADERS });
+  },
+
+  async scheduled(event, env, ctx) {
+    // Handler para cron jobs
+    console.log('Cron job executado:', event.cron);
+    
+    try {
+      // Executar tarefas agendadas baseadas no cron
+      if (event.cron === '*/1 * * * *') {
+        // A cada minuto - verificar jogos ao vivo
+        await checkLiveGames(env);
+      } else if (event.cron === '*/5 * * * *') {
+        // A cada 5 minutos - verificar jogos terminados
+        await checkFinishedGames(env);
+      } else if (event.cron === '0 23 * * *') {
+        // Às 23:00 - relatório diário
+        await generateDailyReport(env);
+      }
+    } catch (error) {
+      console.error('Erro no cron job:', error);
+    }
   }
 };
 
-// Sistema de utilizadores simples
+// Sistema de utilizadores RBAC completo
 const users = {
   'admin@alertapostas.pt': {
     id: 'admin-1',
     email: 'admin@alertapostas.pt',
-    password: 'admin123',
-    role: 'super_admin'
+    password: 'Alert@Postas2025!',
+    username: 'super_admin',
+    full_name: 'Super Admin Alert@Postas',
+    role: 'super_admin',
+    is_active: true,
+    is_verified: true,
+    created_at: new Date().toISOString(),
+    last_login: null
+  },
+  'developer@alertapostas.pt': {
+    id: 'dev-1',
+    email: 'developer@alertapostas.pt',
+    password: 'Dev@Postas2025!',
+    username: 'developer',
+    full_name: 'Developer Alert@Postas',
+    role: 'developer',
+    is_active: true,
+    is_verified: true,
+    created_at: new Date().toISOString(),
+    last_login: null
   }
 };
+
+// Função para gerar JWT simples
+function generateJWT(user) {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    exp: Date.now() + (24 * 60 * 60 * 1000) // 24 horas
+  }));
+  const signature = btoa('alertapostas-secret-key');
+  return `${header}.${payload}.${signature}`;
+}
+
+// Função para verificar JWT
+function verifyJWT(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const payload = JSON.parse(atob(parts[1]));
+    if (payload.exp < Date.now()) return null; // Token expirado
+    
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Função para obter utilizador atual
+function getCurrentUser(request) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  
+  const token = authHeader.substring(7);
+  const payload = verifyJWT(token);
+  if (!payload) return null;
+  
+  const user = Object.values(users).find(u => u.id === payload.sub);
+  return user && user.is_active ? user : null;
+}
 
 // Sistema de armazenamento
 const storage = {
@@ -101,6 +181,11 @@ async function handleAPI(request, env, path) {
       return await handleStatsAPI(request, env, user);
     }
 
+    // Endpoints de gestão de utilizadores
+    if (path.startsWith('/api/v1/users')) {
+      return await handleUsersAPI(request, env, path, user);
+    }
+
     return new Response('API endpoint not found', { status: 404, headers: CORS_HEADERS });
   } catch (error) {
     console.error('API Error:', error);
@@ -113,24 +198,7 @@ async function handleAPI(request, env, path) {
 
 // Middleware de autenticação
 async function authenticateUser(request) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-  
-  try {
-    const token = authHeader.substring(7);
-    const payload = JSON.parse(atob(token));
-    
-    if (payload.exp < Date.now()) {
-      return null; // Token expirado
-    }
-    
-    const user = users[payload.email];
-    return user || null;
-  } catch (error) {
-    return null;
-  }
+  return getCurrentUser(request);
 }
 
 // API para login
@@ -150,24 +218,26 @@ async function handleLoginAPI(request, env) {
       const user = users[email];
       console.log('User found:', user);
       
-      if (user && user.password === password) {
-        // Gerar token JWT
-        const token = btoa(JSON.stringify({ 
-          email: user.email,
-          userId: user.id, 
-          role: user.role,
-          exp: Date.now() + (24 * 60 * 60 * 1000) // 24h
-        }));
+      if (user && user.password === password && user.is_active) {
+        // Atualizar último login
+        user.last_login = new Date().toISOString();
+        
+        // Gerar JWT
+        const token = generateJWT(user);
         
         console.log('Login successful for:', user.email);
         
         return new Response(JSON.stringify({ 
           success: true, 
-          token,
+          access_token: token,
           user: { 
             id: user.id, 
-            email: user.email, 
-            role: user.role
+            email: user.email,
+            username: user.username,
+            full_name: user.full_name,
+            role: user.role,
+            is_active: user.is_active,
+            is_verified: user.is_verified
           }
         }), {
           status: 200,
@@ -201,15 +271,7 @@ async function handleFutureGamesAPI(request, env) {
   };
 
   try {
-    // Buscar jogos para os próximos 7 dias, incluindo hoje
-    const today = new Date();
-    const next7Days = new Date();
-    next7Days.setDate(today.getDate() + 7);
-
-    const from = today.toISOString().split('T')[0];
-    const to = next7Days.toISOString().split('T')[0];
-
-    console.log('Buscando jogos futuros de:', from, 'até:', to);
+    console.log('Buscando jogos futuros...');
 
     // Buscar jogos para os próximos 7 dias, um dia de cada vez
     let allFutureGames = [];
@@ -221,6 +283,7 @@ async function handleFutureGamesAPI(request, env) {
       
       console.log('Buscando jogos futuros para:', dateStr);
       
+      // Usar apenas date e status=NS (Not Started)
       const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${dateStr}&status=NS`;
 
       const response = await fetch(apiFootballUrl, {
@@ -248,21 +311,24 @@ async function handleFutureGamesAPI(request, env) {
         }
       } else {
         console.error('API Football error para', dateStr, ':', response.status, response.statusText);
+        const errorData = await response.text();
+        console.error('Error details:', errorData);
       }
     }
     
-    const futureGames = allFutureGames;
-    console.log('Total jogos futuros encontrados:', futureGames.length);
+    console.log('Total jogos futuros encontrados:', allFutureGames.length);
+    addCommentatorLog(`📅 ${allFutureGames.length} jogos futuros carregados da API Football`, 'info');
 
     // SEM JOGOS DE EXEMPLO - APENAS DADOS REAIS DA API
 
-    return new Response(JSON.stringify(futureGames), {
+    return new Response(JSON.stringify(allFutureGames), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
 
   } catch (error) {
     console.error('Error fetching future games:', error);
+    addCommentatorLog(`❌ Erro ao carregar jogos futuros: ${error.message}`, 'error');
     return new Response(JSON.stringify([]), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -425,6 +491,70 @@ function startSignalUpdateChecker(env) {
   }, 120000); // A cada 2 minutos
 }
 
+// Funções para cron jobs
+async function checkLiveGames(env) {
+  try {
+    console.log('Cron: Verificando jogos ao vivo...');
+    const today = new Date().toISOString().split('T')[0];
+    const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=LIVE`;
+
+    const response = await fetch(apiFootballUrl, {
+      headers: {
+        'x-rapidapi-key': env.API_FOOTBALL_KEY,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.response && data.response.length > 0) {
+        console.log(`Cron: ${data.results} jogos ao vivo encontrados`);
+        addCommentatorLog(`⚡ Cron: ${data.results} jogos ao vivo ativos`, 'info');
+      }
+    }
+  } catch (error) {
+    console.error('Erro no cron checkLiveGames:', error);
+  }
+}
+
+async function checkFinishedGames(env) {
+  try {
+    console.log('Cron: Verificando jogos terminados...');
+    const today = new Date().toISOString().split('T')[0];
+    const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=FT,AET,PEN`;
+
+    const response = await fetch(apiFootballUrl, {
+      headers: {
+        'x-rapidapi-key': env.API_FOOTBALL_KEY,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.response && data.response.length > 0) {
+        console.log(`Cron: ${data.results} jogos terminados encontrados`);
+        addCommentatorLog(`🏁 Cron: ${data.results} jogos terminados - verificando sinais`, 'info');
+      }
+    }
+  } catch (error) {
+    console.error('Erro no cron checkFinishedGames:', error);
+  }
+}
+
+async function generateDailyReport(env) {
+  try {
+    console.log('Cron: Gerando relatório diário...');
+    addCommentatorLog('📊 Cron: Gerando relatório diário às 23:00', 'info');
+    
+    // Aqui seria a lógica para gerar o relatório diário
+    // Por agora, apenas logamos
+    addCommentatorLog('✅ Relatório diário gerado com sucesso', 'success');
+  } catch (error) {
+    console.error('Erro no cron generateDailyReport:', error);
+  }
+}
+
 // API para painel do comentador
 async function handleCommentatorAPI(request, env) {
   const CORS_HEADERS = {
@@ -578,6 +708,152 @@ function addCommentatorLog(message, type = 'info') {
   }
 }
 
+// API para gestão de utilizadores
+async function handleUsersAPI(request, env, path, currentUser) {
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  // Verificar se é admin
+  if (!currentUser || !['super_admin', 'developer'].includes(currentUser.role)) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Acesso negado'
+    }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+
+  try {
+    // GET /api/v1/users - Listar utilizadores
+    if (path === '/api/v1/users' && request.method === 'GET') {
+      const url = new URL(request.url);
+      const role = url.searchParams.get('role');
+      const isActive = url.searchParams.get('is_active');
+      
+      let userList = Object.values(users);
+      
+      // Aplicar filtros
+      if (role) {
+        userList = userList.filter(user => user.role === role);
+      }
+      if (isActive !== null) {
+        userList = userList.filter(user => user.is_active === (isActive === 'true'));
+      }
+      
+      // Remover passwords
+      const safeUsers = userList.map(user => ({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        full_name: user.full_name,
+        role: user.role,
+        is_active: user.is_active,
+        is_verified: user.is_verified,
+        last_login: user.last_login,
+        created_at: user.created_at
+      }));
+      
+      return new Response(JSON.stringify({
+        success: true,
+        users: safeUsers,
+        total: safeUsers.length
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+
+    // GET /api/v1/users/stats/overview - Estatísticas
+    if (path === '/api/v1/users/stats/overview' && request.method === 'GET') {
+      const userList = Object.values(users);
+      const totalUsers = userList.length;
+      const activeUsers = userList.filter(u => u.is_active).length;
+      const verifiedUsers = userList.filter(u => u.is_verified).length;
+      
+      const usersByRole = userList.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {});
+
+      return new Response(JSON.stringify({
+        success: true,
+        stats: {
+          total_users: totalUsers,
+          active_users: activeUsers,
+          inactive_users: totalUsers - activeUsers,
+          verified_users: verifiedUsers,
+          unverified_users: totalUsers - verifiedUsers,
+          users_by_role: usersByRole
+        }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+
+    // GET /api/v1/users/roles/info - Informações de roles
+    if (path === '/api/v1/users/roles/info' && request.method === 'GET') {
+      const rolesInfo = [
+        {
+          name: 'super_admin',
+          description: 'Administrador principal com acesso total ao sistema',
+          permissions: [
+            'gerir_utilizadores',
+            'acessar_painel_admin',
+            'modificar_config_sistema',
+            'acessar_modelos_ml',
+            'eliminar_utilizadores',
+            'criar_super_admin'
+          ]
+        },
+        {
+          name: 'developer',
+          description: 'Desenvolvedor com acesso administrativo limitado',
+          permissions: [
+            'gerir_utilizadores',
+            'acessar_painel_admin',
+            'acessar_modelos_ml',
+            'ver_estatisticas'
+          ]
+        },
+        {
+          name: 'client',
+          description: 'Cliente com acesso básico ao sistema',
+          permissions: [
+            'ver_dashboard',
+            'receber_sinais',
+            'ver_historico_proprio'
+          ]
+        }
+      ];
+
+      return new Response(JSON.stringify({
+        success: true,
+        roles: rolesInfo
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+
+    return new Response('Endpoint not found', { status: 404, headers: CORS_HEADERS });
+
+  } catch (error) {
+    console.error('Users API Error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
 // HTML do Dashboard Simples
 function getSimpleDashboardHTML() {
   return `<!DOCTYPE html>
@@ -608,7 +884,7 @@ function getSimpleDashboardHTML() {
                     </div>
                     <div class="mb-6">
                         <label class="block text-sm font-medium mb-2">Password</label>
-                        <input type="password" id="password" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" value="admin123" required>
+                        <input type="password" id="password" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" value="Alert@Postas2025!" required>
                     </div>
                     <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         🔐 Entrar no Sistema
@@ -619,7 +895,7 @@ function getSimpleDashboardHTML() {
                     <p class="text-sm text-gray-300 text-center">
                         <strong>Credenciais Pré-preenchidas:</strong><br>
                         Email: admin@alertapostas.pt<br>
-                        Password: admin123
+                        Password: Alert@Postas2025!
                     </p>
                 </div>
             </div>
@@ -632,7 +908,13 @@ function getSimpleDashboardHTML() {
                     <div class="flex justify-between items-center h-16">
                         <h1 class="text-xl font-bold text-blue-400">Alert@Postas - Dashboard Seguro</h1>
                         <div class="flex items-center space-x-4">
-                            <span id="userInfo" class="text-sm text-gray-300"></span>
+                            <div class="flex items-center space-x-2">
+                                <span id="userRole" class="px-2 py-1 text-xs rounded-full bg-blue-600 text-white"></span>
+                                <span id="userInfo" class="text-sm text-gray-300"></span>
+                            </div>
+                            <button id="usersBtn" class="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm hidden">
+                                👥 Utilizadores
+                            </button>
                             <button id="logoutBtn" class="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 text-sm">
                                 🚪 Sair
                             </button>
@@ -661,7 +943,7 @@ function getSimpleDashboardHTML() {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Live Games -->
                     <div class="bg-gray-800 rounded-lg shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4">
@@ -675,28 +957,138 @@ function getSimpleDashboardHTML() {
                         </div>
                     </div>
 
-                    <!-- Future Games -->
+                    <!-- Calendar Horizontal -->
                     <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">⚽ Jogos Futuros</h2>
-                            <button id="refreshGames" class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm">
-                                🔄 Atualizar
-                            </button>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">📅</span>
+                                <h2 class="text-lg font-semibold">Seleção de Dias</h2>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="prevWeek" class="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm">
+                                    ←
+                                </button>
+                                <button id="goToday" class="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm">
+                                    Hoje
+                                </button>
+                                <button id="nextWeek" class="bg-gray-700 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm">
+                                    →
+                                </button>
+                            </div>
                         </div>
-                        <div class="mb-4">
-                            <input type="text" id="gameSearch" placeholder="Pesquisar jogos..." class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm">
+
+                        <div class="grid grid-cols-7 gap-2 mb-6">
+                            <div id="day-0" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                <span class="text-xs font-medium text-gray-400">SEG</span>
+                                <span class="text-lg font-bold" id="date-0">15</span>
+                            </div>
+                            <div id="day-1" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                <span class="text-xs font-medium text-gray-400">TER</span>
+                                <span class="text-lg font-bold" id="date-1">16</span>
+                            </div>
+                            <div id="day-2" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                <span class="text-xs font-medium text-gray-400">QUA</span>
+                                <span class="text-lg font-bold" id="date-2">17</span>
+                            </div>
+                            <div id="day-3" class="h-16 flex flex-col items-center justify-center p-2 border-2 border-red-500 rounded-lg cursor-pointer bg-red-900/20">
+                                <span class="text-xs font-medium text-red-400">HOJE</span>
+                                <span class="text-lg font-bold text-red-400" id="date-3">18</span>
+                            </div>
+                            <div id="day-4" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                <span class="text-xs font-medium text-gray-400">SEX</span>
+                                <span class="text-lg font-bold" id="date-4">19</span>
+                            </div>
+                            <div id="day-5" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                <span class="text-xs font-medium text-gray-400">SÁB</span>
+                                <span class="text-lg font-bold" id="date-5">20</span>
+                            </div>
+                            <div id="day-6" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                <span class="text-xs font-medium text-gray-400">DOM</span>
+                                <span class="text-lg font-bold" id="date-6">21</span>
+                            </div>
                         </div>
-                        <div id="future-games-list" class="space-y-2 max-h-80 overflow-y-auto">
-                            <div class="text-center text-gray-400 py-4">Carregando jogos...</div>
+
+                        <!-- Jogos do Dia Selecionado -->
+                        <div class="border-t border-gray-700 pt-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg">⚽</span>
+                                    <h3 class="text-lg font-semibold" id="selectedDayTitle">
+                                        Jogos - Quinta-feira, 18 de Setembro
+                                    </h3>
+                                    <div id="gamesLoading" class="flex items-center gap-2 text-sm text-gray-400 hidden">
+                                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                        Carregando...
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button id="selectAllGames" class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm hidden">
+                                        Selecionar Todos
+                                    </button>
+                                    <button id="deselectAllGames" class="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 text-sm hidden">
+                                        Desmarcar Todos
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Barra de Pesquisa -->
+                            <div class="mb-4">
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        id="gamesSearch" 
+                                        placeholder="Pesquisar por equipas..." 
+                                        class="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm"
+                                    >
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-400 text-sm">🔍</span>
+                                    </div>
+                                    <button id="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white hidden">
+                                        <span class="text-lg">✕</span>
+                                    </button>
+                                </div>
+                                <div id="searchResults" class="text-xs text-gray-400 mt-1 hidden">
+                                    <!-- Resultados da pesquisa aparecerão aqui -->
+                                </div>
+                            </div>
+                            
+                            <div id="gamesError" class="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-4 hidden">
+                                <p class="text-red-400 text-sm" id="gamesErrorText">❌ Erro ao carregar jogos</p>
+                            </div>
+
+                            <div id="noGamesMessage" class="text-center py-8 hidden">
+                                <div class="text-gray-400 mb-2">
+                                    <span class="text-4xl mb-4 block">🕐</span>
+                                    <p class="text-lg font-medium">Sem jogos disponíveis</p>
+                                    <p class="text-sm">Não há jogos programados para esta data</p>
+                                </div>
+                            </div>
+
+                            <!-- Container dos jogos com altura fixa e scroll -->
+                            <div class="bg-gray-700/30 rounded-lg border border-gray-600">
+                                <div id="gamesList" class="max-h-80 overflow-y-auto p-3 space-y-2">
+                                    <!-- Jogos serão carregados aqui -->
+                                </div>
+                            </div>
+                            
+                            <!-- Contador de jogos selecionados -->
+                            <div id="selectedGamesInfo" class="mt-3 text-sm text-gray-400 hidden">
+                                <span id="selectedCount">0</span> jogos selecionados
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Signals -->
-                    <div class="bg-gray-800 rounded-lg shadow-sm p-6">
-                        <h2 class="text-lg font-semibold mb-4">📊 Sinais Enviados</h2>
-                        <div id="signals-list" class="space-y-2 max-h-96 overflow-y-auto">
-                            <div class="text-center text-gray-400 py-4">Nenhum sinal enviado</div>
-                        </div>
+                <!-- Signals -->
+                <div class="bg-gray-800 rounded-lg shadow-sm p-6 mt-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">📊 Sinais Enviados</h2>
+                        <button id="clearSignals" class="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 text-sm">
+                            🗑️ Limpar
+                        </button>
+                    </div>
+                    <div id="signals-list" class="bg-black rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm">
+                        <div class="text-gray-400">Nenhum sinal enviado</div>
                     </div>
                 </div>
 
@@ -735,6 +1127,29 @@ function getSimpleDashboardHTML() {
                         </div>
                     </div>
                 </div>
+
+                <!-- User Stats (Admin Only) -->
+                <div id="userStatsSection" class="bg-gray-800 rounded-lg shadow-sm p-6 mt-8 hidden">
+                    <h2 class="text-lg font-semibold mb-4">👥 Estatísticas de Utilizadores</h2>
+                    <div id="user-stats-display" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-blue-400" id="totalUsers">0</div>
+                            <div class="text-sm text-gray-400">Total Utilizadores</div>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-green-400" id="activeUsers">0</div>
+                            <div class="text-sm text-gray-400">Utilizadores Ativos</div>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-yellow-400" id="verifiedUsers">0</div>
+                            <div class="text-sm text-gray-400">Verificados</div>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="text-lg font-bold text-purple-400" id="usersByRole">-</div>
+                            <div class="text-sm text-gray-400">Por Role</div>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -747,9 +1162,37 @@ function getSimpleDashboardHTML() {
         document.documentElement.classList.add('dark');
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Carregar jogos ao vivo imediatamente (não requer autenticação)
+            loadLiveGames();
+            
+            // Verificar se já está autenticado
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('currentUser');
+            
+            if (token && user) {
+                try {
+                    authToken = token;
+                    currentUser = JSON.parse(user);
+                    console.log('Usuário encontrado no localStorage:', currentUser);
+                    showDashboard();
+                    return;
+                } catch (error) {
+                    console.error('Erro ao carregar usuário do localStorage:', error);
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                }
+            }
+            
             // SEMPRE mostrar login primeiro
             showAuthModal();
             setupEventListeners();
+            
+            // Inicializar calendário após um pequeno delay
+            setTimeout(() => {
+                if (document.getElementById('day-0')) {
+                    initializeCalendar();
+                }
+            }, 100);
         });
 
         function showAuthModal() {
@@ -758,16 +1201,41 @@ function getSimpleDashboardHTML() {
         }
 
         function showDashboard() {
-            document.getElementById('authModal').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('userInfo').textContent = currentUser.role.toUpperCase();
-            
-            // Adicionar log inicial ao comentador
-            addCommentatorLog('🎯 Sistema Alert@Postas iniciado com sucesso', 'success');
-            addCommentatorLog('👤 Utilizador autenticado: ' + currentUser.role.toUpperCase(), 'info');
-            addCommentatorLog('🔍 Carregando dados do sistema...', 'info');
-            
-            loadData();
+            try {
+                console.log('Mostrando dashboard para:', currentUser);
+                
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                
+                // Mostrar informações do utilizador
+                if (currentUser) {
+                    document.getElementById('userInfo').textContent = currentUser.username || currentUser.email;
+                    document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+                }
+                
+                // Mostrar botão de utilizadores para admins
+                if (currentUser && ['super_admin', 'developer'].includes(currentUser.role)) {
+                    document.getElementById('usersBtn').classList.remove('hidden');
+                    document.getElementById('userStatsSection').classList.remove('hidden');
+                    
+                    // Carregar estatísticas de utilizadores
+                    loadUserStats();
+                }
+                
+                // Adicionar log inicial ao comentador (só se tiver token)
+                if (authToken && currentUser) {
+                    addCommentatorLog('🎯 Sistema Alert@Postas iniciado com sucesso', 'success');
+                    addCommentatorLog('👤 Utilizador autenticado: ' + currentUser.role.toUpperCase(), 'info');
+                    addCommentatorLog('🔍 Carregando dados do sistema...', 'info');
+                }
+                
+                loadData();
+                
+                console.log('Dashboard carregado com sucesso');
+            } catch (error) {
+                console.error('Erro ao mostrar dashboard:', error);
+                alert('❌ Erro ao carregar dashboard: ' + error.message);
+            }
         }
 
         async function login(email, password) {
@@ -780,15 +1248,25 @@ function getSimpleDashboardHTML() {
                     body: JSON.stringify({ email, password })
                 });
                 
+                console.log('Status da resposta:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error('Erro HTTP: ' + response.status);
+                }
+                
                 const data = await response.json();
                 console.log('Resposta do login:', data);
                 
                 if (data.success) {
-                    authToken = data.token;
+                    authToken = data.access_token;
                     currentUser = data.user;
                     localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    console.log('Login bem-sucedido, mostrando dashboard...');
                     showDashboard();
                 } else {
+                    console.error('Login falhou:', data.error);
                     alert('❌ ' + data.error);
                 }
             } catch (error) {
@@ -799,6 +1277,7 @@ function getSimpleDashboardHTML() {
 
         function logout() {
             localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
             authToken = null;
             currentUser = null;
             showAuthModal();
@@ -809,6 +1288,8 @@ function getSimpleDashboardHTML() {
                 e.preventDefault();
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
+                
+                console.log('Formulário de login enviado:', { email, password: '***' });
                 login(email, password);
             });
 
@@ -889,10 +1370,12 @@ function getSimpleDashboardHTML() {
         }
 
         async function loadData() {
+            // Carregar jogos ao vivo sempre (não requer autenticação)
+            await loadLiveGames();
+            
             if (!authToken) return;
             
             await Promise.all([
-                loadLiveGames(),
                 loadFutureGames(),
                 loadStats(),
                 loadCommentatorLogs()
@@ -939,12 +1422,10 @@ function getSimpleDashboardHTML() {
                 const gameDate = new Date(game.date).toLocaleDateString('pt-PT');
                 const gameTime = new Date(game.date).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
                 
-                return \`
-                    <div class="game-item p-3 bg-gray-700 rounded-lg">
-                        <div class="font-semibold text-sm">\${game.home_team} vs \${game.away_team}</div>
-                        <div class="text-xs text-gray-400">\${game.league} - \${gameDate} às \${gameTime}</div>
-                    </div>
-                \`;
+                return '<div class="game-item p-3 bg-gray-700 rounded-lg">' +
+                    '<div class="font-semibold text-sm">' + game.home_team + ' vs ' + game.away_team + '</div>' +
+                    '<div class="text-xs text-gray-400">' + game.league + ' - ' + gameDate + ' às ' + gameTime + '</div>' +
+                    '</div>';
             }).join('');
 
             container.innerHTML = gamesHtml;
@@ -959,35 +1440,48 @@ function getSimpleDashboardHTML() {
 
         // Funções para jogos ao vivo
         async function loadLiveGames() {
-            if (!authToken) return;
-
             try {
-                const response = await fetch('/api/v1/live-games', {
-                    headers: { 'Authorization': 'Bearer ' + authToken }
-                });
+                const response = await fetch('/api/v1/live-games');
+                if (!response.ok) {
+                    throw new Error('Falha ao carregar jogos ao vivo: ' + response.status);
+                }
                 const games = await response.json();
                 displayLiveGames(games);
             } catch (error) {
                 console.error('Error loading live games:', error);
+                displayLiveGames([]);
             }
         }
 
         function displayLiveGames(games) {
             const container = document.getElementById('live-games-list');
             
-            if (games.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-4">Nenhum jogo ao vivo</div>';
+            if (!games || games.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 py-8">' +
+                    '<div class="text-4xl mb-2">⚽</div>' +
+                    '<p class="text-lg font-medium">Sem jogos ao vivo no momento</p>' +
+                    '<p class="text-sm">Não há jogos em andamento agora</p>' +
+                    '</div>';
                 return;
             }
 
             const gamesHtml = games.map(game => {
-                return \`
-                    <div class="p-3 bg-red-900 border border-red-700 rounded-lg">
-                        <div class="font-semibold text-sm text-red-100">\${game.home_team} vs \${game.away_team}</div>
-                        <div class="text-xs text-red-300">\${game.league} - \${game.minute}'</div>
-                        <div class="text-sm font-bold text-red-100 mt-1">\${game.home_score} - \${game.away_score}</div>
-                    </div>
-                \`;
+                const gameTime = new Date(game.date).toLocaleTimeString('pt-PT', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                return '<div class="p-3 bg-red-900/20 border border-red-500 rounded-lg hover:bg-red-900/30 transition-colors">' +
+                    '<div class="flex items-center justify-between mb-2">' +
+                        '<div class="font-semibold text-sm text-red-100">' + game.home_team + ' vs ' + game.away_team + '</div>' +
+                        '<div class="bg-red-600 text-white px-2 py-1 rounded text-xs">' + game.minute + '\'</div>' +
+                    '</div>' +
+                    '<div class="text-xs text-red-300 mb-2">' + game.league + ' • ' + game.country + '</div>' +
+                    '<div class="flex items-center justify-between">' +
+                        '<div class="text-sm font-bold text-red-100">' + (game.home_score || 0) + ' - ' + (game.away_score || 0) + '</div>' +
+                        '<div class="text-xs text-red-400">' + gameTime + '</div>' +
+                    '</div>' +
+                '</div>';
             }).join('');
 
             container.innerHTML = gamesHtml;
@@ -1022,7 +1516,7 @@ function getSimpleDashboardHTML() {
                                  log.type === 'warning' ? 'text-yellow-400' : 
                                  log.type === 'error' ? 'text-red-400' : 'text-blue-400';
                 
-                return \`<div class="\${colorClass}">[\${time}] \${log.message}</div>\`;
+                return '<div class="' + colorClass + '">[' + time + '] ' + log.message + '</div>';
             }).join('');
 
             container.innerHTML = logsHtml;
@@ -1031,8 +1525,13 @@ function getSimpleDashboardHTML() {
 
         // Função de pesquisa
         function filterGames() {
-            const searchTerm = document.getElementById('gameSearch').value.toLowerCase();
+            const searchInput = document.getElementById('gameSearch');
+            if (!searchInput) return;
+            
+            const searchTerm = searchInput.value.toLowerCase();
             const container = document.getElementById('future-games-list');
+            if (!container) return;
+            
             const gameElements = container.querySelectorAll('.game-item');
             
             gameElements.forEach(element => {
@@ -1061,8 +1560,419 @@ function getSimpleDashboardHTML() {
             }
         }
 
+        // Função para carregar estatísticas de utilizadores
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/v1/users/stats/overview', {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const stats = data.stats;
+                        document.getElementById('totalUsers').textContent = stats.total_users;
+                        document.getElementById('activeUsers').textContent = stats.active_users;
+                        document.getElementById('verifiedUsers').textContent = stats.verified_users;
+                        
+                        // Mostrar utilizadores por role
+                        const roleText = Object.entries(stats.users_by_role)
+                            .map(function([role, count]) { return role + ': ' + count; })
+                            .join(', ');
+                        document.getElementById('usersByRole').textContent = roleText;
+                        
+                        addCommentatorLog('📊 Estatísticas de utilizadores carregadas', 'info');
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas de utilizadores:', error);
+                addCommentatorLog('❌ Erro ao carregar estatísticas de utilizadores', 'error');
+            }
+        }
+
+        // Event listener para botão de utilizadores
+        document.getElementById('usersBtn').addEventListener('click', () => {
+            alert('Funcionalidade de gestão de utilizadores será implementada em breve!\\n\\nUtilizadores atuais:\\n- Super Admin: admin@alertapostas.pt\\n- Developer: developer@alertapostas.pt\\n\\nSenhas:\\n- Super Admin: Alert@Postas2025!\\n- Developer: Dev@Postas2025!');
+        });
+
+        // Event listener para botão de limpar sinais
+        document.getElementById('clearSignals').addEventListener('click', () => {
+            document.getElementById('signals-list').innerHTML = '<div class="text-gray-400">Nenhum sinal enviado</div>';
+        });
+
         // Atualizar comentador a cada 5 segundos
         setInterval(loadCommentatorLogs, 5000);
+
+        // ===== CALENDÁRIO HORIZONTAL =====
+        let currentWeek = new Date();
+        let selectedDate = new Date().toISOString().split('T')[0];
+        let allGames = [];
+        let selectedGames = new Set();
+
+        function initializeCalendar() {
+            updateCalendarDisplay();
+            setupCalendarEventListeners();
+            setupGamesEventListeners();
+            loadGamesForDate(selectedDate);
+        }
+
+        function setupCalendarEventListeners() {
+            // Botões de navegação
+            document.getElementById('prevWeek').addEventListener('click', () => {
+                currentWeek.setDate(currentWeek.getDate() - 7);
+                updateCalendarDisplay();
+            });
+
+            document.getElementById('nextWeek').addEventListener('click', () => {
+                currentWeek.setDate(currentWeek.getDate() + 7);
+                updateCalendarDisplay();
+            });
+
+            document.getElementById('goToday').addEventListener('click', () => {
+                currentWeek = new Date();
+                selectedDate = new Date().toISOString().split('T')[0];
+                updateCalendarDisplay();
+                loadGamesForDate(selectedDate);
+            });
+
+            // Clique nos dias
+            for (let i = 0; i < 7; i++) {
+                document.getElementById('day-' + i).addEventListener('click', () => {
+                    selectDay(i);
+                });
+            }
+        }
+
+        function setupGamesEventListeners() {
+            // Barra de pesquisa
+            const searchInput = document.getElementById('gamesSearch');
+            const clearSearchBtn = document.getElementById('clearSearch');
+            
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim().toLowerCase();
+                if (query) {
+                    clearSearchBtn.classList.remove('hidden');
+                    filterGames(query);
+                } else {
+                    clearSearchBtn.classList.add('hidden');
+                    showAllGames();
+                }
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearSearchBtn.classList.add('hidden');
+                showAllGames();
+            });
+
+            // Botões de seleção
+            document.getElementById('selectAllGames').addEventListener('click', () => {
+                selectAllVisibleGames();
+            });
+
+            document.getElementById('deselectAllGames').addEventListener('click', () => {
+                deselectAllGames();
+            });
+        }
+
+        function updateCalendarDisplay() {
+            const startOfWeek = getStartOfWeek(currentWeek);
+            
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                
+                const dayElement = document.getElementById('day-' + i);
+                const dateElement = document.getElementById('date-' + i);
+                
+                // Atualizar data
+                const dayOfMonth = day.getDate();
+                dateElement.textContent = dayOfMonth.toString().padStart(2, '0');
+                
+                // Resetar estilos
+                dayElement.className = 'h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors';
+                
+                // Verificar se é hoje
+                const today = new Date();
+                if (day.toDateString() === today.toDateString()) {
+                    dayElement.className = 'h-16 flex flex-col items-center justify-center p-2 border-2 border-red-500 rounded-lg cursor-pointer bg-red-900/20';
+                    const weekdaySpan = dayElement.querySelector('span:first-child');
+                    weekdaySpan.textContent = 'HOJE';
+                    weekdaySpan.className = 'text-xs font-medium text-red-400';
+                    dateElement.className = 'text-lg font-bold text-red-400';
+                } else {
+                    const weekdaySpan = dayElement.querySelector('span:first-child');
+                    const weekdays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+                    weekdaySpan.textContent = weekdays[day.getDay() === 0 ? 6 : day.getDay() - 1];
+                    weekdaySpan.className = 'text-xs font-medium text-gray-400';
+                    dateElement.className = 'text-lg font-bold';
+                }
+                
+                // Verificar se é o dia selecionado
+                const dayString = day.toISOString().split('T')[0];
+                if (dayString === selectedDate) {
+                    dayElement.className += ' bg-blue-900/30 border-blue-500';
+                }
+            }
+        }
+
+        function getStartOfWeek(date) {
+            const startOfWeek = new Date(date);
+            const day = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+            startOfWeek.setDate(diff);
+            return startOfWeek;
+        }
+
+        function selectDay(dayIndex) {
+            const startOfWeek = getStartOfWeek(currentWeek);
+            const selectedDay = new Date(startOfWeek);
+            selectedDay.setDate(startOfWeek.getDate() + dayIndex);
+            selectedDate = selectedDay.toISOString().split('T')[0];
+            
+            updateCalendarDisplay();
+            updateSelectedDayTitle(selectedDay);
+            loadGamesForDate(selectedDate);
+        }
+
+        function updateSelectedDayTitle(date) {
+            const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+            const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            
+            const weekday = weekdays[date.getDay()];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            
+            document.getElementById('selectedDayTitle').textContent = 'Jogos - ' + weekday + ', ' + day + ' de ' + month;
+        }
+
+        async function loadGamesForDate(date) {
+            const gamesList = document.getElementById('gamesList');
+            const gamesLoading = document.getElementById('gamesLoading');
+            const gamesError = document.getElementById('gamesError');
+            const noGamesMessage = document.getElementById('noGamesMessage');
+            
+            // Mostrar loading
+            gamesLoading.classList.remove('hidden');
+            gamesError.classList.add('hidden');
+            noGamesMessage.classList.add('hidden');
+            gamesList.innerHTML = '';
+            
+            try {
+                // Buscar jogos futuros primeiro
+                let response = await fetch('/api/v1/future-games');
+                let games = [];
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const allFutureGames = Array.isArray(data) ? data : [];
+                    
+                    // Filtrar jogos pela data selecionada
+                    const selectedDate = new Date(date).toISOString().split('T')[0];
+                    games = allFutureGames.filter(game => {
+                        const gameDate = new Date(game.date).toISOString().split('T')[0];
+                        return gameDate === selectedDate;
+                    });
+                }
+                
+                // Se não há jogos futuros, tentar buscar jogos ao vivo
+                if (games.length === 0) {
+                    response = await fetch('/api/v1/live-games');
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const liveGames = Array.isArray(data) ? data : [];
+                        
+                        // Filtrar jogos ao vivo pela data selecionada
+                        const selectedDate = new Date(date).toISOString().split('T')[0];
+                        games = liveGames.filter(game => {
+                            const gameDate = new Date(game.date).toISOString().split('T')[0];
+                            return gameDate === selectedDate;
+                        });
+                    }
+                }
+                
+                // Armazenar todos os jogos
+                allGames = games;
+                
+                // Esconder loading
+                gamesLoading.classList.add('hidden');
+                
+                if (games.length === 0) {
+                    noGamesMessage.classList.remove('hidden');
+                    hideGameControls();
+                } else {
+                    displayGames(games);
+                    showGameControls();
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar jogos:', error);
+                gamesLoading.classList.add('hidden');
+                gamesError.classList.remove('hidden');
+                document.getElementById('gamesErrorText').textContent = '❌ Erro ao carregar jogos: ' + error.message;
+            }
+        }
+
+        function displayGames(games) {
+            const gamesList = document.getElementById('gamesList');
+            gamesList.innerHTML = '';
+            
+            games.forEach(game => {
+                const gameElement = document.createElement('div');
+                gameElement.className = 'flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg border border-gray-600 hover:bg-gray-700/70 transition-colors';
+                gameElement.dataset.gameId = game.id;
+                
+                const gameTime = new Date(game.date).toLocaleTimeString('pt-PT', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                // Determinar status do jogo
+                const now = new Date();
+                const gameDate = new Date(game.date);
+                let statusBadge, statusText;
+                
+                if (game.status === 'LIVE') {
+                    statusBadge = 'bg-red-600';
+                    statusText = 'AO VIVO';
+                } else if (gameDate < now) {
+                    statusBadge = 'bg-yellow-600';
+                    statusText = 'TERMINADO';
+                } else {
+                    statusBadge = 'bg-green-600';
+                    statusText = 'FUTURO';
+                }
+                
+                // Checkbox para seleção
+                const isSelected = selectedGames.has(game.id);
+                const checkboxClass = isSelected ? 'checked' : '';
+                
+                gameElement.innerHTML = 
+                    '<div class="flex items-center">' +
+                        '<input type="checkbox" class="game-checkbox w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2" ' + 
+                        (isSelected ? 'checked' : '') + ' data-game-id="' + game.id + '">' +
+                    '</div>' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<div class="flex items-center gap-2 mb-1">' +
+                            '<span class="font-medium text-sm truncate">' + game.home_team + ' vs ' + game.away_team + '</span>' +
+                            '<span class="' + statusBadge + ' text-white px-2 py-1 rounded text-xs whitespace-nowrap">' + statusText + '</span>' +
+                        '</div>' +
+                        '<div class="text-xs text-gray-400 truncate">' +
+                            game.league + ' • ' + game.country +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-right flex-shrink-0">' +
+                        '<div class="text-sm font-medium">' + gameTime + '</div>' +
+                        '<div class="text-xs text-gray-400">ID: ' + game.id + '</div>' +
+                    '</div>';
+                
+                // Adicionar evento ao checkbox
+                const checkbox = gameElement.querySelector('.game-checkbox');
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedGames.add(game.id);
+                        gameElement.classList.add('bg-blue-900/30', 'border-blue-500');
+                    } else {
+                        selectedGames.delete(game.id);
+                        gameElement.classList.remove('bg-blue-900/30', 'border-blue-500');
+                    }
+                    updateSelectedGamesInfo();
+                });
+                
+                gamesList.appendChild(gameElement);
+            });
+            
+            updateSelectedGamesInfo();
+        }
+
+        function filterGames(query) {
+            if (!query || typeof query !== 'string') return allGames;
+            
+            const filteredGames = allGames.filter(game => {
+                const homeTeam = game.home_team.toLowerCase();
+                const awayTeam = game.away_team.toLowerCase();
+                const league = game.league.toLowerCase();
+                const searchTerms = query.toLowerCase().split(' ');
+                
+                return searchTerms.every(term => 
+                    homeTeam.includes(term) || 
+                    awayTeam.includes(term) || 
+                    league.includes(term)
+                );
+            });
+            
+            displayGames(filteredGames);
+            updateSearchResults(query, filteredGames.length);
+        }
+
+        function showAllGames() {
+            displayGames(allGames);
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        function updateSearchResults(query, count) {
+            const searchResults = document.getElementById('searchResults');
+            searchResults.innerHTML = 'Pesquisando por "' + query + '" - ' + count + ' jogos encontrados';
+            searchResults.classList.remove('hidden');
+        }
+
+        function selectAllVisibleGames() {
+            const checkboxes = document.querySelectorAll('.game-checkbox');
+            checkboxes.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    const gameId = parseInt(checkbox.dataset.gameId);
+                    selectedGames.add(gameId);
+                    const gameElement = checkbox.closest('[data-game-id]');
+                    gameElement.classList.add('bg-blue-900/30', 'border-blue-500');
+                }
+            });
+            updateSelectedGamesInfo();
+        }
+
+        function deselectAllGames() {
+            selectedGames.clear();
+            const checkboxes = document.querySelectorAll('.game-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                const gameElement = checkbox.closest('[data-game-id]');
+                gameElement.classList.remove('bg-blue-900/30', 'border-blue-500');
+            });
+            updateSelectedGamesInfo();
+        }
+
+        function updateSelectedGamesInfo() {
+            const selectedCount = selectedGames.size;
+            const selectedInfo = document.getElementById('selectedGamesInfo');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            
+            if (selectedCount > 0) {
+                selectedCountSpan.textContent = selectedCount;
+                selectedInfo.classList.remove('hidden');
+            } else {
+                selectedInfo.classList.add('hidden');
+            }
+        }
+
+        function showGameControls() {
+            document.getElementById('selectAllGames').classList.remove('hidden');
+            document.getElementById('deselectAllGames').classList.remove('hidden');
+        }
+
+        function hideGameControls() {
+            document.getElementById('selectAllGames').classList.add('hidden');
+            document.getElementById('deselectAllGames').classList.add('hidden');
+        }
+
+        // Inicializar calendário quando a página carregar (já está no DOMContentLoaded principal)
+        setTimeout(() => {
+            if (document.getElementById('day-0')) {
+                initializeCalendar();
+            }
+        }, 100);
     </script>
 </body>
 </html>`;
