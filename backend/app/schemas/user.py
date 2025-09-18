@@ -26,7 +26,7 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = Field(None, max_length=255)
-    role: str = Field(default="client")
+    role: str = Field(default="client", regex="^(super_admin|developer|client)$")
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)
 
@@ -36,7 +36,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = Field(None, min_length=3, max_length=100)
     full_name: Optional[str] = Field(None, max_length=255)
-    role: Optional[str] = None
+    role: Optional[str] = Field(None, regex="^(super_admin|developer|client)$")
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
 
@@ -57,3 +57,15 @@ class UserStats(BaseModel):
     verified_users: int
     unverified_users: int
     users_by_role: dict
+
+
+class RoleInfo(BaseModel):
+    """Informações sobre um role"""
+    name: str
+    description: str
+    permissions: List[str]
+
+
+class RolesInfo(BaseModel):
+    """Informações sobre todos os roles disponíveis"""
+    roles: List[RoleInfo]

@@ -10,7 +10,7 @@ from app.core.database import get_async_session
 from app.core.logging import get_logger
 from app.core.auth import get_current_admin, get_current_user
 from app.models.user import User
-from app.schemas.user import UserResponse, UserUpdate, UserCreate, UserListResponse
+from app.schemas.user import UserResponse, UserUpdate, UserCreate, UserListResponse, UserStats, RoleInfo, RolesInfo
 
 router = APIRouter()
 logger = get_logger("users_api")
@@ -163,6 +163,20 @@ async def update_user(
                 detail="Utilizador não encontrado"
             )
         
+        # Validações de role antes de aplicar atualizações
+        if user_update.role == "super_admin" and not current_user.is_super_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Apenas super_admin pode alterar outros utilizadores para super_admin"
+            )
+        
+        # Não permitir que um utilizador se altere a si mesmo para super_admin
+        if current_user.id == user_id and user_update.role == "super_admin":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Não pode alterar o seu próprio role para super_admin"
+            )
+        
         # Aplicar atualizações
         updates = user_update.dict(exclude_unset=True)
         for key, value in updates.items():
@@ -233,6 +247,13 @@ async def create_user(
                 detail="Username já existe"
             )
         
+        # Validações de role
+        if user_create.role == "super_admin" and not current_user.is_super_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Apenas super_admin pode criar outros super_admin"
+            )
+        
         # Criar utilizador
         user = User(
             email=user_create.email,
@@ -283,11 +304,11 @@ async def delete_user(
     try:
         from sqlalchemy import select
         
-        # Apenas superadmin pode eliminar utilizadores
-        if not current_user.is_superadmin:
+        # Apenas super_admin pode eliminar utilizadores
+        if not current_user.is_super_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Apenas superadmin pode eliminar utilizadores"
+                detail="Apenas super_admin pode eliminar utilizadores"
             )
         
         # Não permitir eliminar a si mesmo
@@ -324,4 +345,110 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao eliminar utilizador"
+        )
+
+
+@router.get("/stats/overview", response_model=UserStats)
+async def get_user_stats(
+    current_user: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Obter estatísticas de utilizadores (apenas admin)"""
+    try:
+        from sqlalchemy import select, func
+        
+        # Total de utilizadores
+        total_result = await db.execute(select(func.count(User.id)))
+        total_users = total_result.scalar()
+        
+        # Utilizadores ativos
+        active_result = await db.execute(select(func.count(User.id)).where(User.is_active == True))
+        active_users = active_result.scalar()
+        
+        # Utilizadores inativos
+        inactive_users = total_users - active_users
+        
+        # Utilizadores verificados
+        verified_result = await db.execute(select(func.count(User.id)).where(User.is_verified == True))
+        verified_users = verified_result.scalar()
+        
+        # Utilizadores não verificados
+        unverified_users = total_users - verified_users
+        
+        # Utilizadores por role
+        role_result = await db.execute(
+            select(User.role, func.count(User.id))
+            .group_by(User.role)
+        )
+        users_by_role = {row[0]: row[1] for row in role_result.fetchall()}
+        
+        logger.info("Estatísticas de utilizadores obtidas", admin_id=current_user.id)
+        
+        return UserStats(
+            total_users=total_users,
+            active_users=active_users,
+            inactive_users=inactive_users,
+            verified_users=verified_users,
+            unverified_users=unverified_users,
+            users_by_role=users_by_role
+        )
+        
+    except Exception as e:
+        logger.error("Erro ao obter estatísticas de utilizadores", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter estatísticas de utilizadores"
+        )
+
+
+@router.get("/roles/info", response_model=RolesInfo)
+async def get_roles_info(
+    current_user: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Obter informações sobre roles disponíveis (apenas admin)"""
+    try:
+        roles_info = [
+            RoleInfo(
+                name="super_admin",
+                description="Administrador principal com acesso total ao sistema",
+                permissions=[
+                    "gerir_utilizadores",
+                    "acessar_painel_admin",
+                    "modificar_config_sistema",
+                    "acessar_modelos_ml",
+                    "eliminar_utilizadores",
+                    "criar_super_admin"
+                ]
+            ),
+            RoleInfo(
+                name="developer",
+                description="Desenvolvedor com acesso administrativo limitado",
+                permissions=[
+                    "gerir_utilizadores",
+                    "acessar_painel_admin", 
+                    "acessar_modelos_ml",
+                    "ver_estatisticas"
+                ]
+            ),
+            RoleInfo(
+                name="client",
+                description="Cliente com acesso básico ao sistema",
+                permissions=[
+                    "ver_dashboard",
+                    "receber_sinais",
+                    "ver_historico_proprio"
+                ]
+            )
+        ]
+        
+        logger.info("Informações de roles obtidas", admin_id=current_user.id)
+        
+        return RolesInfo(roles=roles_info)
+        
+    except Exception as e:
+        logger.error("Erro ao obter informações de roles", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter informações de roles"
         )
