@@ -49,6 +49,40 @@ export default {
       }
     }
 
+    // Servir favicon ICO
+    if (path === '/logo.ico') {
+      try {
+        // URL do favicon hospedado externamente
+        const faviconUrl = 'https://raw.githubusercontent.com/Manuc98/Alert-Posta/main/logo.ico';
+        
+        // Fazer fetch do favicon e servir diretamente
+        const response = await fetch(faviconUrl);
+        if (response.ok) {
+          const iconBuffer = await response.arrayBuffer();
+          return new Response(iconBuffer, {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/x-icon',
+              'Cache-Control': 'public, max-age=86400',
+              'Content-Length': iconBuffer.byteLength.toString()
+            }
+          });
+        } else {
+          throw new Error('Falha ao carregar favicon');
+        }
+      } catch (error) {
+        console.error('Erro ao servir favicon:', error);
+        // Fallback para um favicon simples
+        return new Response('', {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/x-icon',
+            'Cache-Control': 'public, max-age=3600'
+          }
+        });
+      }
+    }
+
     // Rotas principais - SEM AUTENTICAÇÃO
     if (path === '/' || path === '/dashboard') {
       return new Response(getDashboardHTML(), {
@@ -1891,8 +1925,8 @@ function getDashboardHTML() {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alert@Postas - Sistema Principal</title>
-    <link rel="icon" type="image/png" href="/logo.png">
-    <link rel="shortcut icon" type="image/png" href="/logo.png">
+    <link rel="icon" type="image/x-icon" href="/logo.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/logo.ico">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -1916,7 +1950,7 @@ function getDashboardHTML() {
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
            <div class="flex items-center">
-               <img src="/logo.png" alt="Alert@Postas" class="logo-img" />
+               <img src="/logo.ico" alt="Alert@Postas" class="logo-img" />
            </div>
                         <div class="flex items-center space-x-4">
                             <button id="historyBtn" class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-2 rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
