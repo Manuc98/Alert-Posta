@@ -364,6 +364,10 @@ async function handleAPI(request, env, path) {
       return await handleTestTelegram(request, env);
     }
     
+    if (path === '/api/debug-games') {
+      return await handleDebugGames(request, env);
+    }
+    
     if (path === '/api/v1/bot/module') {
       return await handleBotModule(request, env);
     }
@@ -706,6 +710,110 @@ async function handleTestTelegram(request, env) {
       status: "error",
       error: errorMsg,
       timestamp
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleDebugGames(request, env) {
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+  
+  const timestamp = new Date().toISOString();
+  
+  try {
+    console.log(`[${timestamp}] DEBUG_GAMES: Iniciando debug dos jogos`);
+    
+    const url = new URL(request.url);
+    const dateParam = url.searchParams.get('date');
+    const targetDate = dateParam || new Date().toISOString().split('T')[0];
+    
+    // Verificar se a API key está configurada
+    if (!env.API_FOOTBALL_KEY) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'API_FOOTBALL_KEY não configurada',
+        timestamp,
+        debug_info: {
+          date_requested: targetDate,
+          api_key_present: false
+        }
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+    
+    // Testar chamada à API-Football
+    const apiUrl = `https://v3.football.api-sports.io/fixtures?date=${targetDate}&status=NS,LIVE,FT,AET,PEN&timezone=Europe/Lisbon`;
+    
+    console.log(`[${timestamp}] DEBUG_GAMES: Testando API-Football: ${apiUrl}`);
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'x-rapidapi-key': env.API_FOOTBALL_KEY,
+        'x-rapidapi-host': 'v3.football.api-sports.io'
+      }
+    });
+    
+    const debugInfo = {
+      date_requested: targetDate,
+      api_key_present: true,
+      api_url: apiUrl,
+      http_status: response.status,
+      http_status_text: response.statusText,
+      response_ok: response.ok
+    };
+    
+    if (response.ok) {
+      const data = await response.json();
+      debugInfo.api_response = {
+        results: data.results || 0,
+        response_length: data.response ? data.response.length : 0,
+        has_response: !!data.response
+      };
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Debug concluído com sucesso',
+        timestamp,
+        debug_info: debugInfo,
+        sample_data: data.response ? data.response.slice(0, 2) : []
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    } else {
+      const errorText = await response.text();
+      debugInfo.error_response = errorText;
+      
+      return new Response(JSON.stringify({
+        success: false,
+        error: `API-Football error: ${response.status}`,
+        timestamp,
+        debug_info: debugInfo
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+    
+  } catch (error) {
+    console.error(`[${timestamp}] DEBUG_GAMES_ERROR: ${error.message}`);
+    
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Erro no debug: ${error.message}`,
+      timestamp,
+      debug_info: {
+        error_type: error.constructor.name,
+        error_message: error.message
+      }
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
