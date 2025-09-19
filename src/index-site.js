@@ -586,22 +586,40 @@ async function handleBotAnalyze(request, env) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
   
+  const timestamp = new Date().toISOString();
+  
   try {
+    // Log estruturado
+    console.log(`[${timestamp}] BOT_ANALYZE: Iniciando análise de jogos via API`);
+    
     // Simular análise de jogos
     await new Promise(resolve => setTimeout(resolve, 1500));
     
+    const signalsCount = Math.floor(Math.random() * 5) + 1;
+    
+    console.log(`[${timestamp}] BOT_ANALYZE_SUCCESS: Análise concluída com ${signalsCount} sinais`);
+    addAuditLog('BOT_ANALYZE', `Análise concluída com ${signalsCount} sinais`, 'system');
+    
     return new Response(JSON.stringify({
-      status: "ok",
+      success: true,
+      status: "completed",
       message: "Análise concluída",
-      signals: Math.floor(Math.random() * 5) + 1
+      signals: signalsCount,
+      timestamp
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
   } catch (error) {
+    const errorMsg = `Erro na análise: ${error.message}`;
+    console.error(`[${timestamp}] BOT_ANALYZE_ERROR: ${errorMsg}`);
+    addAuditLog('BOT_ANALYZE_ERROR', errorMsg, 'system');
+    
     return new Response(JSON.stringify({
+      success: false,
       status: "error",
-      error: error.message
+      error: errorMsg,
+      timestamp
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -3310,13 +3328,13 @@ function getDashboardHTML() {
                 
                 const data = await response.json();
                 
-                if (response.ok && data.status === 'ok') {
+                if (response.ok && data.success && data.status === 'running') {
                     botState.isRunning = true;
                     updateBotStatus('running');
                     showToast('Bot iniciado com sucesso!', 'success');
                     addCommentatorLog('🚀 Bot iniciado com sucesso', 'success');
                 } else {
-                    throw new Error(data.message || 'Falha ao iniciar bot');
+                    throw new Error(data.message || data.error || 'Falha ao iniciar bot');
                 }
             } catch (error) {
                 showToast('Erro ao iniciar bot: ' + error.message, 'error');
@@ -3336,13 +3354,13 @@ function getDashboardHTML() {
                 
                 const data = await response.json();
                 
-                if (response.ok && data.status === 'ok') {
+                if (response.ok && data.success && data.status === 'stopped') {
                     botState.isRunning = false;
                     updateBotStatus('stopped');
                     showToast('Bot parado com sucesso!', 'success');
                     addCommentatorLog('⏹️ Bot parado', 'info');
                 } else {
-                    throw new Error(data.message || 'Falha ao parar bot');
+                    throw new Error(data.message || data.error || 'Falha ao parar bot');
                 }
             } catch (error) {
                 showToast('Erro ao parar bot: ' + error.message, 'error');
@@ -3362,12 +3380,12 @@ function getDashboardHTML() {
                 
                 const data = await response.json();
                 
-                if (response.ok && data.status === 'ok') {
+                if (response.ok && data.success && data.status === 'completed') {
                     showToast('Análise concluída: ' + data.signals + ' sinais gerados', 'success');
                     addCommentatorLog('🔍 Análise concluída: ' + data.signals + ' sinais', 'success');
                     updateStats();
                 } else {
-                    throw new Error(data.message || 'Falha na análise');
+                    throw new Error(data.message || data.error || 'Falha na análise');
                 }
             } catch (error) {
                 showToast('Erro na análise: ' + error.message, 'error');
@@ -3817,7 +3835,9 @@ function getDashboardHTML() {
                 console.log('📡 Resposta da API:', response.status, response.statusText);
                 
                 if (!response.ok) {
-                    throw new Error('Falha ao carregar jogos: ' + response.status);
+                    const apiError = response.headers.get('X-API-FOOTBALL-ERROR');
+                    const errorMsg = apiError ? 'API-Football Error: ' + apiError : 'Falha ao carregar jogos: ' + response.status;
+                    throw new Error(errorMsg);
                 }
                 
                 const games = await response.json();
