@@ -815,24 +815,24 @@ async function handleUnifiedGamesAPI(request, env) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
-  try {
-    const url = new URL(request.url);
-    const dateParam = url.searchParams.get('date');
-    
-    // Se não há parâmetro de data, usar hoje
-    const targetDate = dateParam || new Date().toISOString().split('T')[0];
-    
-    console.log('🎯 Buscando jogos para data:', targetDate);
-    addAuditLog('API_REQUEST', `Busca de jogos para data: ${targetDate}`, 'system');
+  const timestamp = new Date().toISOString();
+  const url = new URL(request.url);
+  const dateParam = url.searchParams.get('date');
+  const targetDate = dateParam || new Date().toISOString().split('T')[0];
 
+  // Log detalhado da requisição
+  console.log(`[${timestamp}] API_REQUEST: GET /api/games?date=${targetDate}`);
+  addAuditLog('API_REQUEST', `GET /api/games?date=${targetDate}`, 'system');
+
+  try {
     // Verificar se a API key está configurada
     if (!env.API_FOOTBALL_KEY) {
-      console.error('❌ API_FOOTBALL_KEY não configurada');
-      return new Response(JSON.stringify({
-        error: 'API_FOOTBALL_KEY não configurada',
-        games: []
-      }), {
-        status: 500,
+      const errorMsg = 'API_FOOTBALL_KEY não configurada';
+      console.error(`[${timestamp}] ERROR: ${errorMsg}`);
+      addAuditLog('API_ERROR', errorMsg, 'system');
+      
+      return new Response(JSON.stringify([]), {
+        status: 200,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
       });
     }
@@ -855,12 +855,12 @@ async function handleUnifiedGamesAPI(request, env) {
       statuses = ['NS'];
     }
 
-    // Fazer múltiplas chamadas para diferentes status (API Football não aceita múltiplos status numa chamada)
+    // Fazer múltiplas chamadas para diferentes status
     for (const status of statuses) {
       try {
         const apiUrl = `https://v3.football.api-sports.io/fixtures?date=${targetDate}&status=${status}&timezone=Europe/Lisbon`;
         
-        console.log(`📡 Chamando API Football: ${apiUrl}`);
+        console.log(`[${timestamp}] API_CALL: ${apiUrl}`);
         
         const response = await fetch(apiUrl, {
           headers: {
@@ -873,80 +873,70 @@ async function handleUnifiedGamesAPI(request, env) {
           const data = await response.json();
           
           if (data.response && data.response.length > 0) {
-            console.log(`✅ ${data.response.length} jogos encontrados com status ${status}`);
+            console.log(`[${timestamp}] API_SUCCESS: ${data.response.length} jogos encontrados com status ${status}`);
             
-            // Mapear para o formato esperado
+            // Mapear APENAS os campos solicitados
             const mappedGames = data.response.map(fixture => ({
               id: fixture.fixture.id,
               liga: fixture.league.name,
               equipaCasa: fixture.teams.home.name,
               equipaFora: fixture.teams.away.name,
-              odds: {
-                casa: fixture.odds && fixture.odds.length > 0 ? fixture.odds[0].values.find(v => v.value === "Home")?.odd || "N/A" : "N/A",
-                empate: fixture.odds && fixture.odds.length > 0 ? fixture.odds[0].values.find(v => v.value === "Draw")?.odd || "N/A" : "N/A",
-                fora: fixture.odds && fixture.odds.length > 0 ? fixture.odds[0].values.find(v => v.value === "Away")?.odd || "N/A" : "N/A"
-              },
-              estado: getPortugueseStatus(fixture.fixture.status.short),
               hora: new Date(fixture.fixture.date).toLocaleTimeString('pt-PT', { 
                 hour: '2-digit', 
                 minute: '2-digit',
                 timeZone: 'Europe/Lisbon'
               }),
-              data: targetDate,
-              // Dados adicionais úteis
-              country: fixture.league.country,
-              league_id: fixture.league.id,
-              venue: fixture.fixture.venue ? fixture.fixture.venue.name : 'N/A',
-              status_long: fixture.fixture.status.long,
-              goals_home: fixture.goals.home,
-              goals_away: fixture.goals.away,
-              elapsed: fixture.fixture.status.elapsed
+              estado: getPortugueseStatus(fixture.fixture.status.short)
             }));
             
             allGames = allGames.concat(mappedGames);
+          } else {
+            console.log(`[${timestamp}] API_EMPTY: Nenhum jogo encontrado para status ${status}`);
           }
         } else {
-          console.error(`❌ Erro API Football (${status}):`, response.status, response.statusText);
-          logApiFailure('API-Football', new Error(`Status ${response.status}: ${response.statusText}`), `Status: ${status}, Data: ${targetDate}`);
+          const errorMsg = `API Football error: ${response.status} ${response.statusText}`;
+          console.error(`[${timestamp}] API_ERROR: ${errorMsg}`);
+          addAuditLog('API_ERROR', `${errorMsg} | URL: ${apiUrl} | Status: ${status}`, 'system');
+          
+          // Se for erro de quota ou key inválida, parar as chamadas
+          if (response.status === 429 || response.status === 401 || response.status === 403) {
+            console.error(`[${timestamp}] API_QUOTA_ERROR: Parando chamadas devido a erro de quota/key`);
+            break;
+          }
         }
         
         // Pequeno delay para evitar rate limiting
         await new Promise(resolve => setTimeout(resolve, 100));
         
       } catch (error) {
-        console.error(`❌ Erro ao buscar jogos com status ${status}:`, error);
-        logApiFailure('API-Football', error, `Status: ${status}, Data: ${targetDate}`);
+        const errorMsg = `Erro de rede: ${error.message}`;
+        console.error(`[${timestamp}] NETWORK_ERROR: ${errorMsg}`);
+        addAuditLog('NETWORK_ERROR', `${errorMsg} | URL: ${apiUrl} | Status: ${status}`, 'system');
       }
     }
 
-    // Remover duplicados (pode acontecer se um jogo mudou de status durante as chamadas)
+    // Remover duplicados
     const uniqueGames = allGames.filter((game, index, self) => 
       index === self.findIndex(g => g.id === game.id)
     );
 
-    console.log(`🎯 Total de jogos únicos encontrados: ${uniqueGames.length}`);
+    console.log(`[${timestamp}] API_RESULT: ${uniqueGames.length} jogos únicos encontrados para ${targetDate}`);
     addAuditLog('API_SUCCESS', `${uniqueGames.length} jogos encontrados para ${targetDate}`, 'system');
 
-    return new Response(JSON.stringify({
-      success: true,
-      date: targetDate,
-      total: uniqueGames.length,
-      games: uniqueGames
-    }), {
+    // Retornar APENAS a lista de jogos (sem wrapper)
+    return new Response(JSON.stringify(uniqueGames), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
 
   } catch (error) {
-    console.error('❌ Erro no endpoint de jogos:', error);
-    logApiFailure('API-Football-Unified', error, `Data: ${dateParam || 'hoje'}`);
+    const errorMsg = `Erro interno: ${error.message}`;
+    console.error(`[${timestamp}] INTERNAL_ERROR: ${errorMsg}`);
+    addAuditLog('INTERNAL_ERROR', `${errorMsg} | Data: ${targetDate}`, 'system');
     
-    return new Response(JSON.stringify({
-      error: 'Erro interno do servidor',
-      message: error.message,
-      games: []
-    }), {
-      status: 500,
+    // Em caso de erro, retornar lista vazia
+    return new Response(JSON.stringify([]), {
+      status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
   }
@@ -3728,16 +3718,24 @@ function getDashboardHTML() {
                 if (!response.ok) {
                     throw new Error('Falha ao carregar jogos: ' + response.status);
                 }
-                const data = await response.json();
-                if (data.success) {
-                    displayLiveGames(data.games);
+                const games = await response.json();
+                
+                // A resposta agora é diretamente um array
+                if (Array.isArray(games)) {
+                    if (games.length === 0) {
+                        displayLiveGames([]);
+                        showToast('Nenhum jogo encontrado ou erro na API', 'warning');
+                    } else {
+                        displayLiveGames(games);
+                        showToast(games.length + ' jogos carregados com sucesso', 'success');
+                    }
                 } else {
-                    throw new Error(data.error || 'Erro ao carregar jogos');
+                    throw new Error('Resposta inválida da API');
                 }
             } catch (error) {
                 console.error('Error loading live games:', error);
                 displayLiveGames([]);
-                showToast('Erro ao carregar jogos ao vivo: ' + error.message, 'error');
+                showToast('Erro ao carregar jogos: ' + error.message, 'error');
             }
         }
 
@@ -3747,8 +3745,8 @@ function getDashboardHTML() {
             if (!games || games.length === 0) {
                 container.innerHTML = '<div class="text-center text-gray-400 py-8">' +
                     '<div class="text-4xl mb-2">⚽</div>' +
-                    '<p class="text-lg font-medium">Sem jogos no momento</p>' +
-                    '<p class="text-sm">Não há jogos disponíveis</p>' +
+                    '<p class="text-lg font-medium">Nenhum jogo encontrado ou erro na API</p>' +
+                    '<p class="text-sm">Verifique a conexão ou tente novamente</p>' +
                     '</div>';
                 return;
             }
@@ -3767,20 +3765,15 @@ function getDashboardHTML() {
                 } else if (game.estado === 'Intervalo') {
                     statusColor = 'bg-yellow-600';
                 }
-
-                // Mostrar resultado se disponível
-                const score = (game.goals_home !== null && game.goals_away !== null) 
-                    ? game.goals_home + ' - ' + game.goals_away
-                    : 'vs';
                 
                 return '<div class="p-3 bg-gray-800/50 border border-gray-600 rounded-lg hover:bg-gray-800/70 transition-colors">' +
                     '<div class="flex items-center justify-between mb-2">' +
-                        '<div class="font-semibold text-sm text-gray-100">' + game.equipaCasa + ' ' + score + ' ' + game.equipaFora + '</div>' +
+                        '<div class="font-semibold text-sm text-gray-100">' + game.equipaCasa + ' vs ' + game.equipaFora + '</div>' +
                         '<div class="' + statusColor + ' text-white px-2 py-1 rounded text-xs">' + statusText + '</div>' +
                     '</div>' +
-                    '<div class="text-xs text-gray-300 mb-2">' + game.liga + (game.country ? ' • ' + game.country : '') + '</div>' +
+                    '<div class="text-xs text-gray-300 mb-2">' + game.liga + '</div>' +
                     '<div class="flex items-center justify-between">' +
-                        '<div class="text-xs text-gray-400">' + game.hora + (game.elapsed ? ' (' + game.elapsed + '\')' : '') + '</div>' +
+                        '<div class="text-xs text-gray-400">' + game.hora + '</div>' +
                         '<div class="text-xs text-gray-500">ID: ' + game.id + '</div>' +
                     '</div>' +
                 '</div>';
