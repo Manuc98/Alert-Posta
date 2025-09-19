@@ -2210,7 +2210,7 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
       console.error(`[${timestamp}] TELEGRAM_ERROR: ${errorMsg}`);
       
       const logEntry = {
-        timestamp,
+        timestamp: timestamp,
         endpoint: 'api.telegram.org/bot/sendMessage',
         method: 'POST',
         params: { chat_id: env.TELEGRAM_GROUP_ID || 'missing' },
@@ -2222,11 +2222,11 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
       return false;
     }
     
-    const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`;
+    const telegramUrl = 'https://api.telegram.org/bot' + env.TELEGRAM_TOKEN + '/sendMessage';
     
     // Log estruturado da chamada
     const logEntry = {
-      timestamp,
+      timestamp: timestamp,
       endpoint: 'api.telegram.org/bot/sendMessage',
       method: 'POST',
       params: { 
@@ -2239,7 +2239,7 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
     const response = await fetch(telegramUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         chat_id: env.TELEGRAM_GROUP_ID,
@@ -2364,10 +2364,7 @@ function getDashboardHTML() {
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="version" content="${Date.now()}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .logo-img {
             height: 40px;
@@ -2929,7 +2926,7 @@ function getDashboardHTML() {
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Período</label>
+                                <label for="historyPeriod" class="block text-sm font-medium text-gray-300 mb-2">Período</label>
                                 <select id="historyPeriod" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
                                     <option value="7">Última Semana</option>
                                     <option value="30" selected>Último Mês</option>
@@ -2939,7 +2936,7 @@ function getDashboardHTML() {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Liga</label>
+                                <label for="historyLeague" class="block text-sm font-medium text-gray-300 mb-2">Liga</label>
                                 <select id="historyLeague" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
                                     <option value="all">Todas as Ligas</option>
                                     <option value="Liga Portugal">Liga Portugal</option>
@@ -2950,11 +2947,11 @@ function getDashboardHTML() {
                                 </select>
                             </div>
                             <div id="customDateRange" class="hidden">
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Data Início</label>
+                                <label for="historyStartDate" class="block text-sm font-medium text-gray-300 mb-2">Data Início</label>
                                 <input type="date" id="historyStartDate" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
                             </div>
                             <div id="customDateRangeEnd" class="hidden">
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Data Fim</label>
+                                <label for="historyEndDate" class="block text-sm font-medium text-gray-300 mb-2">Data Fim</label>
                                 <input type="date" id="historyEndDate" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
                             </div>
                         </div>
@@ -3083,7 +3080,7 @@ function getDashboardHTML() {
                                 </label>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Tempo de Antecipação (minutos)</label>
+                                <label for="advanceTime" class="block text-sm font-medium text-gray-300 mb-2">Tempo de Antecipação (minutos)</label>
                                 <select id="advanceTime" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-white">
                                     <option value="15">15 minutos</option>
                                     <option value="30" selected>30 minutos</option>
@@ -3180,7 +3177,7 @@ function getDashboardHTML() {
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Tipo de Evento</label>
+                                <label for="logEventType" class="block text-sm font-medium text-gray-300 mb-2">Tipo de Evento</label>
                                 <select id="logEventType" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
                                     <option value="all">Todos os Eventos</option>
                                     <option value="API_FAILURE">Falhas da API</option>
@@ -3192,7 +3189,7 @@ function getDashboardHTML() {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Utilizador</label>
+                                <label for="logUser" class="block text-sm font-medium text-gray-300 mb-2">Utilizador</label>
                                 <select id="logUser" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
                                     <option value="all">Todos os Utilizadores</option>
                                     <option value="system">Sistema</option>
@@ -3201,7 +3198,7 @@ function getDashboardHTML() {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Limite</label>
+                                <label for="logLimit" class="block text-sm font-medium text-gray-300 mb-2">Limite</label>
                                 <select id="logLimit" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
                                     <option value="50">50 logs</option>
                                     <option value="100" selected>100 logs</option>
@@ -3343,15 +3340,15 @@ function getDashboardHTML() {
                             </h3>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">API Football Key</label>
+                                    <label for="apiKey" class="block text-sm font-medium text-gray-300 mb-2">API Football Key</label>
                                     <input type="password" id="apiKey" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Insira a chave da API">
                         </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Limite de Chamadas por Hora</label>
+                                    <label for="apiLimit" class="block text-sm font-medium text-gray-300 mb-2">Limite de Chamadas por Hora</label>
                                     <input type="number" id="apiLimit" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="100" min="1" max="1000">
                         </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
+                                    <label for="timezone" class="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
                                     <select id="timezone" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
                                         <option value="Europe/Lisbon">Europe/Lisbon (Portugal)</option>
                                         <option value="Europe/London">Europe/London (UK)</option>
@@ -3370,15 +3367,15 @@ function getDashboardHTML() {
                             </h3>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Threshold de Sinais (%)</label>
+                                    <label for="signalThreshold" class="block text-sm font-medium text-gray-300 mb-2">Threshold de Sinais (%)</label>
                                     <input type="number" id="signalThreshold" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="85" min="50" max="100">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Máximo de Sinais por Dia</label>
+                                    <label for="maxSignalsPerDay" class="block text-sm font-medium text-gray-300 mb-2">Máximo de Sinais por Dia</label>
                                     <input type="number" id="maxSignalsPerDay" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="50" min="1" max="200">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Horário do Relatório Diário</label>
+                                    <label for="dailyReportTime" class="block text-sm font-medium text-gray-300 mb-2">Horário do Relatório Diário</label>
                                     <input type="time" id="dailyReportTime" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" value="23:59">
                                 </div>
                             </div>
@@ -3392,16 +3389,16 @@ function getDashboardHTML() {
                             </h3>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Token do Bot</label>
+                                    <label for="telegramToken" class="block text-sm font-medium text-gray-300 mb-2">Token do Bot</label>
                                     <input type="password" id="telegramToken" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Insira o token do bot">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">ID do Grupo</label>
+                                    <label for="telegramGroupId" class="block text-sm font-medium text-gray-300 mb-2">ID do Grupo</label>
                                     <input type="text" id="telegramGroupId" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="-1001234567890">
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="telegramEnabled" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
-                                    <label class="ml-2 text-sm text-gray-300">Ativar notificações do Telegram</label>
+                                    <label for="telegramEnabled" class="ml-2 text-sm text-gray-300">Ativar notificações do Telegram</label>
                                 </div>
                             </div>
                         </div>
@@ -3632,7 +3629,7 @@ function getDashboardHTML() {
             
             elementsToCheck.forEach(id => {
                 const element = document.getElementById(id);
-                console.log(`${id}: ${element ? '✅ Encontrado' : '❌ Não encontrado'}`);
+                console.log(id + ': ' + (element ? 'Encontrado' : 'Não encontrado'));
             });
             
             loadData();
@@ -3964,11 +3961,11 @@ function getDashboardHTML() {
             const analyzeGamesBtn = document.getElementById('analyzeGames');
             const refreshTokenBtn = document.getElementById('refreshToken');
             
-            console.log('🤖 Botões do bot:');
-            console.log(`  startBot: ${startBotBtn ? '✅' : '❌'}`);
-            console.log(`  stopBot: ${stopBotBtn ? '✅' : '❌'}`);
-            console.log(`  analyzeGames: ${analyzeGamesBtn ? '✅' : '❌'}`);
-            console.log(`  refreshToken: ${refreshTokenBtn ? '✅' : '❌'}`);
+            console.log('Botões do bot:');
+            console.log('  startBot: ' + (startBotBtn ? 'OK' : 'ERRO'));
+            console.log('  stopBot: ' + (stopBotBtn ? 'OK' : 'ERRO'));
+            console.log('  analyzeGames: ' + (analyzeGamesBtn ? 'OK' : 'ERRO'));
+            console.log('  refreshToken: ' + (refreshTokenBtn ? 'OK' : 'ERRO'));
             
             if (startBotBtn) {
                 startBotBtn.addEventListener('click', startBot);
