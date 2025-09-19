@@ -308,6 +308,45 @@ async function handleAPI(request, env, path) {
   try {
     // Rotas públicas (sem login)
     
+    // Bot endpoints
+    if (path === '/api/v1/bot/start') {
+      return await handleBotStart(request, env);
+    }
+    
+    if (path === '/api/v1/bot/stop') {
+      return await handleBotStop(request, env);
+    }
+    
+    if (path === '/api/v1/bot/analyze') {
+      return await handleBotAnalyze(request, env);
+    }
+    
+    if (path === '/api/v1/bot/refresh-token') {
+      return await handleBotRefreshToken(request, env);
+    }
+    
+    if (path === '/api/v1/bot/module') {
+      return await handleBotModule(request, env);
+    }
+    
+    if (path === '/api/v1/bot/status') {
+      return await handleBotStatus(request, env);
+    }
+
+    // Games endpoints
+    if (path === '/api/v1/games/live') {
+      return await handleGamesLive(request, env);
+    }
+    
+    if (path.startsWith('/api/v1/games/day')) {
+      return await handleGamesDay(request, env);
+    }
+    
+    // Stats endpoint
+    if (path === '/api/v1/stats') {
+      return await handleStats(request, env);
+    }
+
     if (path === '/api/v1/future-games') {
       return await handleFutureGamesAPI(request, env);
     }
@@ -410,6 +449,295 @@ async function handleAPI(request, env, path) {
 // Funções de autenticação removidas - SISTEMA SEM LOGIN
 
 // API para jogos futuros
+// Bot handlers
+async function handleBotStart(request, env) {
+  try {
+    // Simular início do bot
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      message: "Bot iniciado com sucesso"
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleBotStop(request, env) {
+  try {
+    // Simular paragem do bot
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      message: "Bot parado com sucesso"
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleBotAnalyze(request, env) {
+  try {
+    // Simular análise de jogos
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      message: "Análise concluída",
+      signals: Math.floor(Math.random() * 5) + 1
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleBotRefreshToken(request, env) {
+  try {
+    // Simular atualização do token
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      message: "Token atualizado com sucesso"
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleBotModule(request, env) {
+  try {
+    const body = await request.json();
+    const { module, enabled } = body;
+    
+    // Simular alteração do módulo
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: `Módulo ${module} ${enabled ? 'ativado' : 'desativado'}`,
+      module: module,
+      enabled: enabled
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleBotStatus(request, env) {
+  try {
+    return new Response(JSON.stringify({
+      success: true,
+      status: 'running',
+      modules: {
+        mlOverUnder: true,
+        mlWinner: false,
+        valueBet: true,
+        nextGoal: false
+      },
+      stats: {
+        mlAccuracy: 87.5,
+        signalsGenerated: 24,
+        activeModules: 2
+      }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+// Games handlers
+async function handleGamesLive(request, env) {
+  try {
+    // Mock data para jogos ao vivo
+    const liveGames = [
+      {
+        id: 1,
+        home_team: "Real Madrid",
+        away_team: "Barcelona",
+        league: "La Liga",
+        minute: 67,
+        score: "2-1",
+        status: "LIVE"
+      },
+      {
+        id: 2,
+        home_team: "Manchester United",
+        away_team: "Liverpool",
+        league: "Premier League",
+        minute: 23,
+        score: "0-0",
+        status: "LIVE"
+      },
+      {
+        id: 3,
+        home_team: "Bayern Munich",
+        away_team: "Borussia Dortmund",
+        league: "Bundesliga",
+        minute: 89,
+        score: "1-1",
+        status: "LIVE"
+      }
+    ];
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      games: liveGames
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleGamesDay(request, env) {
+  try {
+    const url = new URL(request.url);
+    const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
+    
+    // Mock data para jogos do dia
+    const dayGames = [
+      {
+        id: 1,
+        home_team: "Chelsea",
+        away_team: "Arsenal",
+        league: "Premier League",
+        time: "15:00",
+        date: date,
+        status: "SCHEDULED"
+      },
+      {
+        id: 2,
+        home_team: "PSG",
+        away_team: "Marseille",
+        league: "Ligue 1",
+        time: "17:30",
+        date: date,
+        status: "SCHEDULED"
+      },
+      {
+        id: 3,
+        home_team: "Juventus",
+        away_team: "AC Milan",
+        league: "Serie A",
+        time: "20:45",
+        date: date,
+        status: "SCHEDULED"
+      }
+    ];
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      games: dayGames,
+      date: date
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+// Stats handler
+async function handleStats(request, env) {
+  try {
+    const stats = {
+      total_signals: 156,
+      greens: 98,
+      reds: 45,
+      pending: 13,
+      win_rate: 68.5
+    };
+    
+    return new Response(JSON.stringify({
+      status: "ok",
+      stats: stats
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      status: "error",
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
 async function handleFutureGamesAPI(request, env) {
   const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -1368,21 +1696,24 @@ function getDashboardHTML() {
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
+    <style>
+        .logo-img {
+            height: 40px;
+            max-height: 100%;
+            object-fit: contain;
+            padding: 0 8px;
+        }
+    </style>
 </head>
 <body class="h-full bg-gray-900 text-white">
     <div class="min-h-full">
             <header class="bg-gray-800 shadow-sm border-b border-gray-700">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
-                        <div class="flex items-center">
-                            <img src="/logo.png" alt="Alert@Postas" class="h-12 w-auto object-contain" />
-                        </div>
+           <div class="flex items-center">
+               <img src="/logo.png" alt="Alert@Postas" class="logo-img" />
+           </div>
                         <div class="flex items-center space-x-4">
-                            <span class="text-gray-300">Sistema Ativo</span>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                                <span class="text-sm text-gray-300">Online</span>
-                            </div>
                             <button id="historyBtn" class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-2 rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
                                 <span class="text-lg">📊</span>
                                 Histórico
@@ -1421,26 +1752,106 @@ function getDashboardHTML() {
                             Controlo do Bot
                         </h2>
                         <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            <span class="text-sm text-gray-300">Sistema Ativo</span>
+                            <div id="botStatusIndicator" class="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <span id="botStatusText" class="text-sm text-gray-300">Parado</span>
                         </div>
                     </div>
-                    <div class="flex flex-wrap gap-4">
-                        <button id="startBot" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-500/25 font-medium flex items-center gap-2">
-                            <span class="text-lg">🚀</span>
-                            Iniciar Bot
-                        </button>
-                        <button id="stopBot" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-red-500/25 font-medium flex items-center gap-2">
-                            <span class="text-lg">⏹️</span>
-                            Parar Bot
-                        </button>
-                        <button id="analyzeGames" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 font-medium flex items-center gap-2">
-                            <span class="text-lg">🔍</span>
-                            Analisar Jogos
-                        </button>
-                        <div id="botStatus" class="flex items-center px-6 py-3 bg-gray-600 rounded-lg border border-gray-500">
-                            <span class="text-gray-300 font-medium">Status:</span>
-                            <span id="statusText" class="ml-3 text-yellow-400 font-semibold">Parado</span>
+                    
+                    <!-- Operações Principais -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                            <span class="text-xl">⚙️</span>
+                            Operações
+                        </h3>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="startBot" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-500/25 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="text-lg">🚀</span>
+                                Iniciar Bot
+                            </button>
+                            <button id="stopBot" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-red-500/25 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="text-lg">⏹️</span>
+                                Parar Bot
+                            </button>
+                            <button id="analyzeGames" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 font-medium flex items-center gap-2">
+                                <span class="text-lg">🔍</span>
+                                Analisar Jogos
+                            </button>
+                            <button id="refreshToken" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg hover:shadow-purple-500/25 font-medium flex items-center gap-2">
+                                <span class="text-lg">🔄</span>
+                                Atualizar Token
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Módulos de Inteligência -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                            <span class="text-xl">🧠</span>
+                            Inteligência Artificial
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-600 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-gray-300">ML Over/Under</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="mlOverUnderToggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-500 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="text-xs text-gray-400">Análise de Over/Under com ML</div>
+                            </div>
+                            <div class="bg-gray-600 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-gray-300">ML Winner</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="mlWinnerToggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-500 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="text-xs text-gray-400">Previsão de vencedor com ML</div>
+                            </div>
+                            <div class="bg-gray-600 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-gray-300">Value Bet</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="valueBetToggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-500 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="text-xs text-gray-400">Detecção de apostas de valor</div>
+                            </div>
+                            <div class="bg-gray-600 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-gray-300">Next Goal</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="nextGoalToggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-500 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="text-xs text-gray-400">Previsão do próximo golo</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monitorização -->
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                            <span class="text-xl">📊</span>
+                            Monitorização
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-gray-600 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold text-green-400" id="mlAccuracy">0%</div>
+                                <div class="text-xs text-gray-400">Precisão ML</div>
+                            </div>
+                            <div class="bg-gray-600 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold text-blue-400" id="signalsGenerated">0</div>
+                                <div class="text-xs text-gray-400">Sinais Gerados</div>
+                            </div>
+                            <div class="bg-gray-600 rounded-lg p-3 text-center">
+                                <div class="text-2xl font-bold text-yellow-400" id="activeModules">0</div>
+                                <div class="text-xs text-gray-400">Módulos Ativos</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2353,16 +2764,251 @@ function getDashboardHTML() {
 
 
 
+        // Estado do bot
+        let botState = {
+            isRunning: false,
+            modules: {
+                mlOverUnder: false,
+                mlWinner: false,
+                valueBet: false,
+                nextGoal: false
+            },
+            stats: {
+                mlAccuracy: 0,
+                signalsGenerated: 0,
+                activeModules: 0
+            }
+        };
+
+        // Funções de controlo do bot
+        async function startBot() {
+            try {
+                showLoading('startBot', 'Iniciando...');
+                const response = await fetch('/api/v1/bot/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    botState.isRunning = true;
+                    updateBotStatus('running');
+                    showToast('Bot iniciado com sucesso!', 'success');
+                    addCommentatorLog('🚀 Bot iniciado com sucesso', 'success');
+                } else {
+                    throw new Error(data.message || 'Falha ao iniciar bot');
+                }
+            } catch (error) {
+                showToast('Erro ao iniciar bot: ' + error.message, 'error');
+                addCommentatorLog('❌ Erro ao iniciar bot: ' + error.message, 'error');
+            } finally {
+                hideLoading('startBot', 'Iniciar Bot');
+            }
+        }
+
+        async function stopBot() {
+            try {
+                showLoading('stopBot', 'Parando...');
+                const response = await fetch('/api/v1/bot/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    botState.isRunning = false;
+                    updateBotStatus('stopped');
+                    showToast('Bot parado com sucesso!', 'success');
+                    addCommentatorLog('⏹️ Bot parado', 'info');
+                } else {
+                    throw new Error(data.message || 'Falha ao parar bot');
+                }
+            } catch (error) {
+                showToast('Erro ao parar bot: ' + error.message, 'error');
+                addCommentatorLog('❌ Erro ao parar bot: ' + error.message, 'error');
+            } finally {
+                hideLoading('stopBot', 'Parar Bot');
+            }
+        }
+
+        async function analyzeGames() {
+            try {
+                showLoading('analyzeGames', 'Analisando...');
+                const response = await fetch('/api/v1/bot/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    showToast('Análise concluída: ' + data.signals + ' sinais gerados', 'success');
+                    addCommentatorLog('🔍 Análise concluída: ' + data.signals + ' sinais', 'success');
+                    updateStats();
+                } else {
+                    throw new Error(data.message || 'Falha na análise');
+                }
+            } catch (error) {
+                showToast('Erro na análise: ' + error.message, 'error');
+                addCommentatorLog('❌ Erro na análise: ' + error.message, 'error');
+            } finally {
+                hideLoading('analyzeGames', 'Analisar Jogos');
+            }
+        }
+
+        async function refreshToken() {
+            try {
+                showLoading('refreshToken', 'Atualizando...');
+                const response = await fetch('/api/v1/bot/refresh-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    showToast('Token atualizado com sucesso!', 'success');
+                    addCommentatorLog('🔄 Token atualizado', 'success');
+                } else {
+                    throw new Error(data.message || 'Falha ao atualizar token');
+                }
+            } catch (error) {
+                showToast('Erro ao atualizar token: ' + error.message, 'error');
+                addCommentatorLog('❌ Erro ao atualizar token: ' + error.message, 'error');
+            } finally {
+                hideLoading('refreshToken', 'Atualizar Token');
+            }
+        }
+
+        function updateBotStatus(status) {
+            const indicator = document.getElementById('botStatusIndicator');
+            const text = document.getElementById('botStatusText');
+            
+            if (status === 'running') {
+                indicator.className = 'w-3 h-3 bg-green-500 rounded-full animate-pulse';
+                text.textContent = 'Ativo';
+            } else {
+                indicator.className = 'w-3 h-3 bg-red-500 rounded-full';
+                text.textContent = 'Parado';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('mlAccuracy').textContent = botState.stats.mlAccuracy + '%';
+            document.getElementById('signalsGenerated').textContent = botState.stats.signalsGenerated;
+            document.getElementById('activeModules').textContent = botState.stats.activeModules;
+        }
+
+        function showLoading(buttonId, text) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span> ' + text;
+            }
+        }
+
+        function hideLoading(buttonId, originalText) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            // Criar elemento toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transform transition-all duration-300 translate-x-full';
+            
+            if (type === 'success') {
+                toast.className += ' bg-green-600';
+            } else if (type === 'error') {
+                toast.className += ' bg-red-600';
+            } else {
+                toast.className += ' bg-blue-600';
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Animar entrada
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remover após 3 segundos
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        function showSuccess(message) {
+            showToast(message, 'success');
+        }
+
+        function showError(message) {
+            showToast(message, 'error');
+        }
+
+        async function toggleModule(moduleName, enabled) {
+            try {
+                botState.modules[moduleName] = enabled;
+                updateActiveModulesCount();
+                
+                const response = await fetch('/api/v1/bot/module', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ module: moduleName, enabled: enabled })
+                });
+                
+                if (response.ok) {
+                    const status = enabled ? 'ativado' : 'desativado';
+                    showSuccess('Módulo ' + moduleName + ' ' + status);
+                    addCommentatorLog('🧠 Módulo ' + moduleName + ' ' + status, 'info');
+                } else {
+                    throw new Error('Falha ao alterar módulo');
+                }
+            } catch (error) {
+                showError('Erro ao alterar módulo: ' + error.message);
+                addCommentatorLog('❌ Erro ao alterar módulo: ' + error.message, 'error');
+            }
+        }
+
+        function updateActiveModulesCount() {
+            botState.stats.activeModules = Object.values(botState.modules).filter(Boolean).length;
+            updateStats();
+        }
+
         function setupEventListeners() {
             
             // Botões do bot
-            const startBot = document.getElementById('startBot');
-            const stopBot = document.getElementById('stopBot');
-            const analyzeGames = document.getElementById('analyzeGames');
+            const startBotBtn = document.getElementById('startBot');
+            const stopBotBtn = document.getElementById('stopBot');
+            const analyzeGamesBtn = document.getElementById('analyzeGames');
+            const refreshTokenBtn = document.getElementById('refreshToken');
             
-            if (startBot) startBot.addEventListener('click', () => botAction('start'));
-            if (stopBot) stopBot.addEventListener('click', () => botAction('stop'));
-            if (analyzeGames) analyzeGames.addEventListener('click', () => botAction('analyze'));
+            if (startBotBtn) startBotBtn.addEventListener('click', startBot);
+            if (stopBotBtn) stopBotBtn.addEventListener('click', stopBot);
+            if (analyzeGamesBtn) analyzeGamesBtn.addEventListener('click', analyzeGames);
+            if (refreshTokenBtn) refreshTokenBtn.addEventListener('click', refreshToken);
+
+            // Módulos ML
+            const mlOverUnderToggle = document.getElementById('mlOverUnderToggle');
+            const mlWinnerToggle = document.getElementById('mlWinnerToggle');
+            const valueBetToggle = document.getElementById('valueBetToggle');
+            const nextGoalToggle = document.getElementById('nextGoalToggle');
+
+            if (mlOverUnderToggle) mlOverUnderToggle.addEventListener('change', (e) => toggleModule('mlOverUnder', e.target.checked));
+            if (mlWinnerToggle) mlWinnerToggle.addEventListener('change', (e) => toggleModule('mlWinner', e.target.checked));
+            if (valueBetToggle) valueBetToggle.addEventListener('change', (e) => toggleModule('valueBet', e.target.checked));
+            if (nextGoalToggle) nextGoalToggle.addEventListener('change', (e) => toggleModule('nextGoal', e.target.checked));
             
             // Botões de refresh
             const refreshGames = document.getElementById('refreshGames');
@@ -2509,10 +3155,18 @@ function getDashboardHTML() {
         async function loadStats() {
             try {
                 const response = await fetch('/api/v1/stats');
-                const stats = await response.json();
-                displayStats(stats);
+                if (!response.ok) {
+                    throw new Error('Falha ao carregar estatísticas: ' + response.status);
+                }
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    displayStats(data.stats);
+                } else {
+                    throw new Error(data.message || 'Erro ao carregar estatísticas');
+                }
             } catch (error) {
                 console.error('Error loading stats:', error);
+                showToast('Erro ao carregar estatísticas: ' + error.message, 'error');
             }
         }
 
@@ -2538,24 +3192,29 @@ function getDashboardHTML() {
         }
 
         function displayStats(stats) {
-            document.getElementById('totalSignals').textContent = stats.signals.total;
-            document.getElementById('greenSignals').textContent = stats.signals.greens;
-            document.getElementById('redSignals').textContent = stats.signals.reds;
-            document.getElementById('pendingSignals').textContent = stats.signals.pending;
+            document.getElementById('totalSignals').textContent = stats.total_signals;
+            document.getElementById('greenSignals').textContent = stats.greens;
+            document.getElementById('redSignals').textContent = stats.reds;
+            document.getElementById('pendingSignals').textContent = stats.pending;
         }
 
         // Funções para jogos ao vivo
         async function loadLiveGames() {
             try {
-                const response = await fetch('/api/v1/live-games');
+                const response = await fetch('/api/v1/games/live');
                 if (!response.ok) {
                     throw new Error('Falha ao carregar jogos ao vivo: ' + response.status);
                 }
-                const games = await response.json();
-                displayLiveGames(games);
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    displayLiveGames(data.games);
+                } else {
+                    throw new Error(data.message || 'Erro ao carregar jogos');
+                }
             } catch (error) {
                 console.error('Error loading live games:', error);
                 displayLiveGames([]);
+                showToast('Erro ao carregar jogos ao vivo: ' + error.message, 'error');
             }
         }
 
