@@ -1,7 +1,12 @@
-name = 'alertapostas-site'
+name = "alertapostas-site"
 main = "src/index-site.js"
 compatibility_date = "2025-09-17"
 compatibility_flags = ["nodejs_compat"]
+
+# Configuração para evitar minificação automática
+[build]
+command = "echo 'No build step needed'"
+minify = false
 
 # Configurações de cron triggers (para workers automáticos)
 [triggers]
