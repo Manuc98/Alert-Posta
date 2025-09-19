@@ -360,6 +360,10 @@ async function handleAPI(request, env, path) {
       return await handleBotRefreshToken(request, env);
     }
     
+    if (path === '/api/test-telegram') {
+      return await handleTestTelegram(request, env);
+    }
+    
     if (path === '/api/v1/bot/module') {
       return await handleBotModule(request, env);
     }
@@ -614,6 +618,88 @@ async function handleBotAnalyze(request, env) {
     const errorMsg = `Erro na análise: ${error.message}`;
     console.error(`[${timestamp}] BOT_ANALYZE_ERROR: ${errorMsg}`);
     addAuditLog('BOT_ANALYZE_ERROR', errorMsg, 'system');
+    
+    return new Response(JSON.stringify({
+      success: false,
+      status: "error",
+      error: errorMsg,
+      timestamp
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleTestTelegram(request, env) {
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+  
+  const timestamp = new Date().toISOString();
+  
+  try {
+    console.log(`[${timestamp}] TELEGRAM_TEST: Testando integração com Telegram`);
+    
+    // Verificar se as credenciais estão configuradas
+    if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_GROUP_ID) {
+      const errorMsg = 'Credenciais do Telegram não configuradas';
+      console.error(`[${timestamp}] TELEGRAM_TEST_ERROR: ${errorMsg}`);
+      
+      return new Response(JSON.stringify({
+        success: false,
+        status: "error",
+        error: errorMsg,
+        timestamp
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+    
+    // Enviar mensagem de teste
+    const testMessage = `🧪 <b>TESTE DE INTEGRAÇÃO</b>\n\n` +
+                       `✅ Sistema Alert@Postas funcionando\n` +
+                       `📅 Data: ${new Date().toLocaleString('pt-PT')}\n` +
+                       `🤖 Bot configurado corretamente\n\n` +
+                       `💡 <i>Esta é uma mensagem de teste automática</i>`;
+    
+    const sent = await sendTelegramMessage(env, testMessage);
+    
+    if (sent) {
+      console.log(`[${timestamp}] TELEGRAM_TEST_SUCCESS: Teste enviado com sucesso`);
+      addAuditLog('TELEGRAM_TEST', 'Teste de integração enviado com sucesso', 'system');
+      
+      return new Response(JSON.stringify({
+        success: true,
+        status: "sent",
+        message: "Mensagem de teste enviada com sucesso",
+        timestamp
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    } else {
+      const errorMsg = 'Falha ao enviar mensagem de teste para Telegram';
+      console.error(`[${timestamp}] TELEGRAM_TEST_ERROR: ${errorMsg}`);
+      
+      return new Response(JSON.stringify({
+        success: false,
+        status: "error",
+        error: errorMsg,
+        timestamp
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+      });
+    }
+    
+  } catch (error) {
+    const errorMsg = `Erro no teste do Telegram: ${error.message}`;
+    console.error(`[${timestamp}] TELEGRAM_TEST_ERROR: ${errorMsg}`);
+    addAuditLog('TELEGRAM_TEST_ERROR', errorMsg, 'system');
     
     return new Response(JSON.stringify({
       success: false,
@@ -1921,8 +2007,40 @@ function addCommentatorLog(message, type = 'info') {
 
 // Função para enviar mensagem para o Telegram
 async function sendTelegramMessage(env, message, parseMode = 'HTML') {
+  const timestamp = new Date().toISOString();
+  
   try {
+    // Verificar se as credenciais estão configuradas
+    if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_GROUP_ID) {
+      const errorMsg = 'Credenciais do Telegram não configuradas';
+      console.error(`[${timestamp}] TELEGRAM_ERROR: ${errorMsg}`);
+      
+      const logEntry = {
+        timestamp,
+        endpoint: 'api.telegram.org/bot/sendMessage',
+        method: 'POST',
+        params: { chat_id: env.TELEGRAM_GROUP_ID || 'missing' },
+        error: 'MISSING_CREDENTIALS',
+        message: errorMsg
+      };
+      console.log('TELEGRAM_LOG:', JSON.stringify(logEntry));
+      
+      return false;
+    }
+    
     const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`;
+    
+    // Log estruturado da chamada
+    const logEntry = {
+      timestamp,
+      endpoint: 'api.telegram.org/bot/sendMessage',
+      method: 'POST',
+      params: { 
+        chat_id: env.TELEGRAM_GROUP_ID,
+        parse_mode: parseMode,
+        message_length: message.length
+      }
+    };
     
     const response = await fetch(telegramUrl, {
       method: 'POST',
@@ -1936,16 +2054,38 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
       })
     });
 
+    logEntry.httpStatus = response.status;
+    logEntry.httpStatusText = response.statusText;
+
     if (response.ok) {
-      console.log('Mensagem enviada para Telegram com sucesso');
+      logEntry.success = true;
+      console.log(`[${timestamp}] TELEGRAM_SUCCESS: Mensagem enviada para Telegram com sucesso`);
+      console.log('TELEGRAM_LOG:', JSON.stringify(logEntry));
       return true;
     } else {
       const errorData = await response.text();
-      console.error('Erro ao enviar para Telegram:', response.status, errorData);
+      const errorMsg = `Telegram API error: ${response.status} - ${errorData}`;
+      console.error(`[${timestamp}] TELEGRAM_ERROR: ${errorMsg}`);
+      
+      logEntry.success = false;
+      logEntry.error = errorMsg;
+      console.log('TELEGRAM_LOG:', JSON.stringify(logEntry));
+      
       return false;
     }
   } catch (error) {
-    console.error('Erro na função sendTelegramMessage:', error);
+    const errorMsg = `Network error: ${error.message}`;
+    console.error(`[${timestamp}] TELEGRAM_NETWORK_ERROR: ${errorMsg}`);
+    
+    const logEntry = {
+      timestamp,
+      endpoint: 'api.telegram.org/bot/sendMessage',
+      method: 'POST',
+      error: 'NETWORK_ERROR',
+      message: errorMsg
+    };
+    console.log('TELEGRAM_LOG:', JSON.stringify(logEntry));
+    
     return false;
   }
 }

@@ -77,6 +77,26 @@ const testEndpoints = async () => {
       console.log('❌ Estrutura da resposta analyze-games está incorreta');
     }
     
+    // Teste 5: POST /api/test-telegram
+    console.log('\n📱 Testando POST /api/test-telegram');
+    const telegramResponse = await fetch(`${baseUrl}/api/test-telegram`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    console.log(`Status: ${telegramResponse.status} ${telegramResponse.statusText}`);
+    
+    const telegramData = await telegramResponse.json();
+    console.log(`Resposta:`, telegramData);
+    
+    // Validar estrutura da resposta
+    if (telegramData.success && telegramData.status === 'sent') {
+      console.log('✅ Teste do Telegram enviado com sucesso');
+    } else if (telegramData.success === false && telegramData.status === 'error') {
+      console.log('⚠️ Teste do Telegram falhou (verificar credenciais):', telegramData.error);
+    } else {
+      console.log('❌ Estrutura da resposta test-telegram está incorreta');
+    }
+    
     console.log('\n✅ Testes concluídos!');
     
   } catch (error) {
