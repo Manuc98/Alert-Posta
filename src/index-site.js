@@ -3644,7 +3644,36 @@ function getDashboardHTML() {
             }, 100);
         });
 
-
+        // Funcao para alternar modulos - ESCOPO GLOBAL
+        async function toggleModule(moduleName, enabled) {
+            try {
+                const response = await fetch('/api/v1/bot/module', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        module: moduleName,
+                        enabled: enabled
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    const status = enabled ? 'ativado' : 'desativado';
+                    showToast('Modulo ' + moduleName + ' ' + status + '!', 'success');
+                    addCommentatorLog(' Modulo ' + moduleName + ' ' + status, 'info');
+                    updateModuleStats();
+                } else {
+                    throw new Error(data.message || 'Falha ao alterar modulo');
+                }
+            } catch (error) {
+                showToast('Erro ao alterar modulo: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao alterar modulo: ' + error.message, 'error');
+                // Reverter o toggle em caso de erro
+                const toggle = document.getElementById(moduleName + 'Toggle');
+                if (toggle) toggle.checked = !enabled;
+            }
+        }
 
         // Estado do bot
         let botState = {
@@ -3766,36 +3795,7 @@ function getDashboardHTML() {
             }
         }
 
-        // Funcao para alternar modulos
-        async function toggleModule(moduleName, enabled) {
-            try {
-                const response = await fetch('/api/v1/bot/module', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        module: moduleName,
-                        enabled: enabled
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.status === 'ok') {
-                    const status = enabled ? 'ativado' : 'desativado';
-                    showToast('Modulo ' + moduleName + ' ' + status + '!', 'success');
-                    addCommentatorLog(' Modulo ' + moduleName + ' ' + status, 'info');
-                    updateModuleStats();
-                } else {
-                    throw new Error(data.message || 'Falha ao alterar modulo');
-                }
-            } catch (error) {
-                showToast('Erro ao alterar modulo: ' + error.message, 'error');
-                addCommentatorLog(' Erro ao alterar modulo: ' + error.message, 'error');
-                // Reverter o toggle em caso de erro
-                const toggle = document.getElementById(moduleName + 'Toggle');
-                if (toggle) toggle.checked = !enabled;
-            }
-        }
+        // Funcao para alternar modulos - REMOVIDA (movida para escopo global)
 
         // Funcao para atualizar estatisticas dos modulos
         function updateModuleStats() {
@@ -3923,29 +3923,7 @@ function getDashboardHTML() {
             showToast(message, 'error');
         }
 
-        async function toggleModule(moduleName, enabled) {
-            try {
-                botState.modules[moduleName] = enabled;
-                updateActiveModulesCount();
-                
-                const response = await fetch('/api/v1/bot/module', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ module: moduleName, enabled: enabled })
-                });
-                
-                if (response.ok) {
-                    const status = enabled ? 'ativado' : 'desativado';
-                    showSuccess('Modulo ' + moduleName + ' ' + status);
-                    addCommentatorLog(' Modulo ' + moduleName + ' ' + status, 'info');
-                } else {
-                    throw new Error('Falha ao alterar modulo');
-                }
-            } catch (error) {
-                showError('Erro ao alterar modulo: ' + error.message);
-                addCommentatorLog(' Erro ao alterar modulo: ' + error.message, 'error');
-            }
-        }
+        // Funcao toggleModule duplicada removida - usando versao global
 
         function updateActiveModulesCount() {
             botState.stats.activeModules = Object.values(botState.modules).filter(Boolean).length;
