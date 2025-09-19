@@ -83,7 +83,7 @@ export default {
       }
     }
 
-    // Rotas principais - SEM AUTENTICAÇÃO
+    // Rotas principais - SEM AUTENTICACAO
     if (path === '/' || path === '/dashboard') {
       return new Response(getDashboardHTML(), {
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...CORS_HEADERS }
@@ -105,14 +105,14 @@ export default {
     try {
       // Executar tarefas agendadas baseadas no cron
       if (event.cron === '*/1 * * * *') {
-        // A cada minuto - verificar jogos ao vivo e notificações
+        // A cada minuto - verificar jogos ao vivo e notificacoes
         await checkLiveGames(env);
         await checkUpcomingNotifications(env);
       } else if (event.cron === '*/5 * * * *') {
         // A cada 5 minutos - verificar jogos terminados
         await checkFinishedGames(env);
       } else if (event.cron === '0 23 * * *') {
-        // Às 23:00 - relatório diário
+        // As 23:00 - relatorio diario
         await generateDailyReport(env);
       }
     } catch (error) {
@@ -121,7 +121,7 @@ export default {
   }
 };
 
-// Sistema simplificado - SEM AUTENTICAÇÃO
+// Sistema simplificado - SEM AUTENTICACAO
 
         // Sistema de armazenamento
         const storage = {
@@ -130,7 +130,7 @@ export default {
             futureGames: [],
             liveGames: [],
             commentatorLogs: [],
-            signalTracking: [], // Para tracking de sinais e relatórios
+            signalTracking: [], // Para tracking de sinais e relatorios
             dailyStats: {
                 date: null,
                 totalSignals: 0,
@@ -138,10 +138,10 @@ export default {
                 redSignals: 0,
                 pendingSignals: 0
             },
-            users: [], // Sistema de utilizadores com subscrições
-            subscriptions: [], // Histórico de subscrições
+            users: [], // Sistema de utilizadores com subscricoes
+            subscriptions: [], // Historico de subscricoes
             
-            // Sistema de notificações inteligentes
+            // Sistema de notificacoes inteligentes
             notificationSettings: {
                 enabled: true,
                 advanceTime: 30, // minutos antes do jogo
@@ -150,13 +150,13 @@ export default {
                 emailEnabled: false,
                 lastNotificationCheck: null
             },
-            notifications: [], // Histórico de notificações enviadas
+            notifications: [], // Historico de notificacoes enviadas
             
             // Sistema de Logs e Auditoria
             auditLogs: [] // Logs de auditoria (id, timestamp, tipo_evento, detalhe, utilizador)
         };
 
-        // Funções de Logs e Auditoria
+        // Funcoes de Logs e Auditoria
         function addAuditLog(tipoEvento, detalhe, utilizador = null) {
             const log = {
                 id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
@@ -168,7 +168,7 @@ export default {
             
             storage.auditLogs.push(log);
             
-            // Manter apenas os últimos 1000 logs para não sobrecarregar
+            // Manter apenas os ultimos 1000 logs para nao sobrecarregar
             if (storage.auditLogs.length > 1000) {
                 storage.auditLogs = storage.auditLogs.slice(-1000);
             }
@@ -185,22 +185,22 @@ export default {
         }
         
         function logReportSent(reportType, details, user = 'system') {
-            addAuditLog('REPORT_SENT', 'Relatório ' + reportType + ' enviado: ' + details, user);
+            addAuditLog('REPORT_SENT', 'Relatorio ' + reportType + ' enviado: ' + details, user);
         }
         
         function logNotificationSent(notification, user = 'system') {
-            addAuditLog('NOTIFICATION_SENT', 'Notificação enviada: ' + notification.message, user);
+            addAuditLog('NOTIFICATION_SENT', 'Notificacao enviada: ' + notification.message, user);
         }
         
         function logUserAction(action, details, user = 'system') {
-            addAuditLog('USER_ACTION', 'Ação do utilizador: ' + action + ' | ' + details, user);
+            addAuditLog('USER_ACTION', 'Acao do utilizador: ' + action + ' | ' + details, user);
         }
         
         function logSystemEvent(event, details, user = 'system') {
             addAuditLog('SYSTEM_EVENT', 'Evento do sistema: ' + event + ' | ' + details, user);
         }
 
-        // Função para gerar explicação dos sinais
+        // Funcao para gerar explicacao dos sinais
         function generateExplanation(game, prediction, confidence) {
             const explanations = {
                 teamStats: generateTeamStats(game),
@@ -214,7 +214,7 @@ export default {
         }
 
         function generateTeamStats(game) {
-            // Simular estatísticas das equipas (em produção viria da API)
+            // Simular estatisticas das equipas (em producao viria da API)
             return {
                 homeTeam: {
                     name: game.home_team,
@@ -261,28 +261,28 @@ export default {
             const reasons = [];
             
             if (confidence > 85) {
-                reasons.push('Forte diferença de qualidade entre as equipas');
-                reasons.push('Historial favorável nos confrontos diretos');
+                reasons.push('Forte diferenca de qualidade entre as equipas');
+                reasons.push('Historial favoravel nos confrontos diretos');
             } else if (confidence > 70) {
                 reasons.push('Boa forma recente da equipa favorita');
                 reasons.push('Vantagem de jogar em casa');
             } else {
                 reasons.push('Jogo equilibrado com ligeira vantagem');
-                reasons.push('Análise baseada em estatísticas recentes');
+                reasons.push('Analise baseada em estatisticas recentes');
             }
             
             if (prediction.includes('Over')) {
-                reasons.push('Ambas as equipas têm ataques produtivos');
+                reasons.push('Ambas as equipas tem ataques produtivos');
                 reasons.push('Defesas com fragilidades identificadas');
             } else if (prediction.includes('Under')) {
-                reasons.push('Defesas sólidas de ambas as equipas');
+                reasons.push('Defesas solidas de ambas as equipas');
                 reasons.push('Estilo de jogo mais cauteloso esperado');
             }
             
             return reasons;
         }
 
-        // Função para criar um sinal simulado (para demonstração)
+        // Funcao para criar um sinal simulado (para demonstracao)
         function createMockSignalWithExplanation() {
             const mockGames = [
                 { id: 1, home_team: 'FC Porto', away_team: 'Sporting CP', league: 'Liga Portugal', date: new Date().toISOString() },
@@ -311,13 +311,13 @@ export default {
             };
             
             storage.signals.push(signal);
-            addCommentatorLog('🧠 Sinal criado com explicação: ' + signal.home_team + ' vs ' + signal.away_team + ' - ' + signal.prediction, 'success');
+            addCommentatorLog(' Sinal criado com explicacao: ' + signal.home_team + ' vs ' + signal.away_team + ' - ' + signal.prediction, 'success');
             logSignalGeneration(signal, 'system');
             
             return signal;
         }
         
-        // Função para adicionar explicação a sinais existentes
+        // Funcao para adicionar explicacao a sinais existentes
         function addExplanationToExistingSignals() {
             storage.signals.forEach(signal => {
                 if (!signal.explanation) {
@@ -327,12 +327,12 @@ export default {
                         league: signal.league
                     };
                     signal.explanation = generateExplanation(mockGame, signal.prediction, signal.confidence);
-                    addCommentatorLog('🔧 Explicação adicionada ao sinal: ' + signal.home_team + ' vs ' + signal.away_team, 'info');
+                    addCommentatorLog(' Explicacao adicionada ao sinal: ' + signal.home_team + ' vs ' + signal.away_team, 'info');
                 }
             });
         }
 
-// Função principal para lidar com APIs
+// Funcao principal para lidar com APIs
 async function handleAPI(request, env, path) {
   const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -341,7 +341,7 @@ async function handleAPI(request, env, path) {
   };
 
   try {
-    // Rotas públicas (sem login)
+    // Rotas publicas (sem login)
     
     // Bot endpoints
     if (path === '/api/start-bot') {
@@ -418,7 +418,7 @@ async function handleAPI(request, env, path) {
       return await handleCommentatorAPI(request, env);
     }
     
-    // APIs sem autenticação
+    // APIs sem autenticacao
     if (path === '/api/v1/signals') {
       return await handleSignalsAPI(request, env);
     }
@@ -435,7 +435,7 @@ async function handleAPI(request, env, path) {
             return await handleDailyReportAPI(request, env);
         }
         
-        // Endpoints de Subscrições
+        // Endpoints de Subscricoes
         if (path === '/api/v1/subscription/create-session') {
             return await handleCreateSubscriptionSession(request, env);
         }
@@ -452,7 +452,7 @@ async function handleAPI(request, env, path) {
             return await handleSubscriptionAdmin(request, env);
         }
         
-        // Endpoints de Histórico de Performance
+        // Endpoints de Historico de Performance
         if (path === '/api/v1/history/performance') {
             return await handleHistoryPerformance(request, env);
         }
@@ -461,7 +461,7 @@ async function handleAPI(request, env, path) {
             return await handleHistoryStats(request, env);
         }
         
-        // Endpoints de Notificações Inteligentes
+        // Endpoints de Notificacoes Inteligentes
         if (path === '/api/v1/notifications/config') {
             return await handleNotificationConfig(request, env);
         }
@@ -485,7 +485,7 @@ async function handleAPI(request, env, path) {
         
         
 
-    // Endpoints de utilizadores removidos - SISTEMA SEM AUTENTICAÇÃO
+    // Endpoints de utilizadores removidos - SISTEMA SEM AUTENTICACAO
 
     return new Response('API endpoint not found', { status: 404, headers: CORS_HEADERS });
     } catch (error) {
@@ -497,7 +497,7 @@ async function handleAPI(request, env, path) {
     }
   }
   
-// Funções de autenticação removidas - SISTEMA SEM LOGIN
+// Funcoes de autenticacao removidas - SISTEMA SEM LOGIN
 
 // API para jogos futuros
 // Bot handlers
@@ -514,7 +514,7 @@ async function handleBotStart(request, env) {
     // Log estruturado
     console.log(`[${timestamp}] BOT_START: Iniciando bot via API`);
     
-    // Simular início do bot
+    // Simular inicio do bot
     await new Promise(resolve => setTimeout(resolve, 500));
     
     console.log(`[${timestamp}] BOT_START_SUCCESS: Bot iniciado com sucesso`);
@@ -602,20 +602,20 @@ async function handleBotAnalyze(request, env) {
   
   try {
     // Log estruturado
-    console.log(`[${timestamp}] BOT_ANALYZE: Iniciando análise de jogos via API`);
+    console.log(`[${timestamp}] BOT_ANALYZE: Iniciando analise de jogos via API`);
     
-    // Simular análise de jogos
+    // Simular analise de jogos
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const signalsCount = Math.floor(Math.random() * 5) + 1;
     
-    console.log(`[${timestamp}] BOT_ANALYZE_SUCCESS: Análise concluída com ${signalsCount} sinais`);
-    addAuditLog('BOT_ANALYZE', `Análise concluída com ${signalsCount} sinais`, 'system');
+    console.log(`[${timestamp}] BOT_ANALYZE_SUCCESS: Analise concluida com ${signalsCount} sinais`);
+    addAuditLog('BOT_ANALYZE', `Analise concluida com ${signalsCount} sinais`, 'system');
     
     return new Response(JSON.stringify({
       success: true,
       status: "completed",
-      message: "Análise concluída",
+      message: "Analise concluida",
       signals: signalsCount,
       timestamp
     }), {
@@ -623,7 +623,7 @@ async function handleBotAnalyze(request, env) {
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
   } catch (error) {
-    const errorMsg = `Erro na análise: ${error.message}`;
+    const errorMsg = `Erro na analise: ${error.message}`;
     console.error(`[${timestamp}] BOT_ANALYZE_ERROR: ${errorMsg}`);
     addAuditLog('BOT_ANALYZE_ERROR', errorMsg, 'system');
     
@@ -649,11 +649,11 @@ async function handleTestTelegram(request, env) {
   const timestamp = new Date().toISOString();
   
   try {
-    console.log(`[${timestamp}] TELEGRAM_TEST: Testando integração com Telegram`);
+    console.log(`[${timestamp}] TELEGRAM_TEST: Testando integracao com Telegram`);
     
-    // Verificar se as credenciais estão configuradas
+    // Verificar se as credenciais estao configuradas
     if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_GROUP_ID) {
-      const errorMsg = 'Credenciais do Telegram não configuradas';
+      const errorMsg = 'Credenciais do Telegram nao configuradas';
       console.error(`[${timestamp}] TELEGRAM_TEST_ERROR: ${errorMsg}`);
       
       return new Response(JSON.stringify({
@@ -668,17 +668,17 @@ async function handleTestTelegram(request, env) {
     }
     
     // Enviar mensagem de teste
-    const testMessage = `🧪 <b>TESTE DE INTEGRAÇÃO</b>\n\n` +
-                       `✅ Sistema Alert@Postas funcionando\n` +
-                       `📅 Data: ${new Date().toLocaleString('pt-PT')}\n` +
-                       `🤖 Bot configurado corretamente\n\n` +
-                       `💡 <i>Esta é uma mensagem de teste automática</i>`;
+    const testMessage = ` <b>TESTE DE INTEGRACAO</b>\n\n` +
+                       ` Sistema Alert@Postas funcionando\n` +
+                       ` Data: ${new Date().toLocaleString('pt-PT')}\n` +
+                       ` Bot configurado corretamente\n\n` +
+                       ` <i>Esta e uma mensagem de teste automatica</i>`;
     
     const sent = await sendTelegramMessage(env, testMessage);
     
     if (sent) {
       console.log(`[${timestamp}] TELEGRAM_TEST_SUCCESS: Teste enviado com sucesso`);
-      addAuditLog('TELEGRAM_TEST', 'Teste de integração enviado com sucesso', 'system');
+      addAuditLog('TELEGRAM_TEST', 'Teste de integracao enviado com sucesso', 'system');
       
       return new Response(JSON.stringify({
         success: true,
@@ -737,11 +737,11 @@ async function handleDebugGames(request, env) {
     const dateParam = url.searchParams.get('date');
     const targetDate = dateParam || new Date().toISOString().split('T')[0];
     
-    // Verificar se a API key está configurada
+    // Verificar se a API key esta configurada
     if (!env.API_FOOTBALL_KEY) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'API_FOOTBALL_KEY não configurada',
+        error: 'API_FOOTBALL_KEY nao configurada',
         timestamp,
         debug_info: {
           date_requested: targetDate,
@@ -753,7 +753,7 @@ async function handleDebugGames(request, env) {
       });
     }
     
-    // Testar chamada à API-Football
+    // Testar chamada a API-Football
     const apiUrl = `https://v3.football.api-sports.io/fixtures?date=${targetDate}&status=NS,LIVE,FT,AET,PEN&timezone=Europe/Lisbon`;
     
     console.log(`[${timestamp}] DEBUG_GAMES: Testando API-Football: ${apiUrl}`);
@@ -784,7 +784,7 @@ async function handleDebugGames(request, env) {
       
       return new Response(JSON.stringify({
         success: true,
-        message: 'Debug concluído com sucesso',
+        message: 'Debug concluido com sucesso',
         timestamp,
         debug_info: debugInfo,
         sample_data: data.response ? data.response.slice(0, 2) : []
@@ -837,7 +837,7 @@ async function handleDebugFrontend(request, env) {
   try {
     console.log(`[${timestamp}] DEBUG_FRONTEND: Verificando estado do frontend`);
     
-    // Verificar se as variáveis de ambiente estão configuradas
+    // Verificar se as variaveis de ambiente estao configuradas
     const envStatus = {
       API_FOOTBALL_KEY: !!env.API_FOOTBALL_KEY,
       TELEGRAM_TOKEN: !!env.TELEGRAM_TOKEN,
@@ -845,7 +845,7 @@ async function handleDebugFrontend(request, env) {
       ENVIRONMENT: env.ENVIRONMENT || 'not_set'
     };
     
-    // Testar endpoints básicos
+    // Testar endpoints basicos
     const endpoints = [
       { name: 'games', url: '/api/games?date=2025-09-19' },
       { name: 'start-bot', url: '/api/start-bot' },
@@ -880,7 +880,7 @@ async function handleDebugFrontend(request, env) {
     
     return new Response(JSON.stringify({
       success: true,
-      message: 'Debug do frontend concluído',
+      message: 'Debug do frontend concluido',
       timestamp,
       debug_info: {
         environment: envStatus,
@@ -915,7 +915,7 @@ async function handleBotRefreshToken(request, env) {
   };
   
   try {
-    // Simular atualização do token
+    // Simular atualizacao do token
     await new Promise(resolve => setTimeout(resolve, 800));
     
     return new Response(JSON.stringify({
@@ -947,12 +947,12 @@ async function handleBotModule(request, env) {
     const body = await request.json();
     const { module, enabled } = body;
     
-    // Simular alteração do módulo
+    // Simular alteracao do modulo
     await new Promise(resolve => setTimeout(resolve, 300));
     
     return new Response(JSON.stringify({
       status: "ok",
-      message: "Módulo " + module + " " + (enabled ? "ativado" : "desativado"),
+      message: "Modulo " + module + " " + (enabled ? "ativado" : "desativado"),
       module: module,
       enabled: enabled
     }), {
@@ -1150,14 +1150,14 @@ async function handleUnifiedGamesAPI(request, env) {
   const dateParam = url.searchParams.get('date');
   const targetDate = dateParam || new Date().toISOString().split('T')[0];
 
-  // Log detalhado da requisição
+  // Log detalhado da requisicao
   console.log(`[${timestamp}] API_REQUEST: GET /api/games?date=${targetDate}`);
   addAuditLog('API_REQUEST', `GET /api/games?date=${targetDate}`, 'system');
 
   try {
-    // Verificar se a API key está configurada
+    // Verificar se a API key esta configurada
     if (!env.API_FOOTBALL_KEY) {
-      const errorMsg = 'API_FOOTBALL_KEY não configurada';
+      const errorMsg = 'API_FOOTBALL_KEY nao configurada';
       console.error(`[${timestamp}] ERROR: ${errorMsg}`);
       addAuditLog('API_ERROR', errorMsg, 'system');
       
@@ -1200,7 +1200,7 @@ async function handleUnifiedGamesAPI(request, env) {
       statuses = ['NS'];
     }
 
-    // Fazer múltiplas chamadas para diferentes status
+    // Fazer multiplas chamadas para diferentes status
     for (const status of statuses) {
       try {
         const apiUrl = `https://v3.football.api-sports.io/fixtures?date=${targetDate}&status=${status}&timezone=Europe/Lisbon`;
@@ -1214,7 +1214,7 @@ async function handleUnifiedGamesAPI(request, env) {
           }
         });
 
-        // Log estruturado da chamada à API-Football
+        // Log estruturado da chamada a API-Football
         const apiLogEntry = {
           timestamp,
           endpoint: 'v3.football.api-sports.io/fixtures',
@@ -1261,7 +1261,7 @@ async function handleUnifiedGamesAPI(request, env) {
           apiLogEntry.error = errorMsg;
           console.log('API_FOOTBALL_LOG:', JSON.stringify(apiLogEntry));
           
-          // Se for erro de quota ou key inválida, parar as chamadas
+          // Se for erro de quota ou key invalida, parar as chamadas
           if (response.status === 429 || response.status === 401 || response.status === 403) {
             console.error(`[${timestamp}] API_QUOTA_ERROR: Parando chamadas devido a erro de quota/key`);
             break;
@@ -1294,7 +1294,7 @@ async function handleUnifiedGamesAPI(request, env) {
       index === self.findIndex(g => g.id === game.id)
     );
 
-    console.log(`[${timestamp}] API_RESULT: ${uniqueGames.length} jogos únicos encontrados para ${targetDate}`);
+    console.log(`[${timestamp}] API_RESULT: ${uniqueGames.length} jogos unicos encontrados para ${targetDate}`);
     addAuditLog('API_SUCCESS', `${uniqueGames.length} jogos encontrados para ${targetDate}`, 'system');
 
     // Retornar APENAS a lista de jogos (sem wrapper)
@@ -1331,17 +1331,17 @@ async function handleUnifiedGamesAPI(request, env) {
   }
 }
 
-// Função auxiliar para traduzir status para português
+// Funcao auxiliar para traduzir status para portugues
 function getPortugueseStatus(status) {
   const statusMap = {
     'NS': 'Agendado',
     'LIVE': 'Ao Vivo',
-    '1H': '1º Tempo',
-    '2H': '2º Tempo', 
+    '1H': '1o Tempo',
+    '2H': '2o Tempo', 
     'HT': 'Intervalo',
     'FT': 'Terminado',
-    'AET': 'Prorrogação',
-    'PEN': 'Pênaltis',
+    'AET': 'Prorrogacao',
+    'PEN': 'Penaltis',
     'SUSP': 'Suspenso',
     'INT': 'Interrompido',
     'PST': 'Adiado',
@@ -1364,7 +1364,7 @@ async function handleFutureGamesAPI(request, env) {
   try {
     console.log('Buscando jogos futuros...');
 
-    // Buscar jogos para os próximos 7 dias, um dia de cada vez
+    // Buscar jogos para os proximos 7 dias, um dia de cada vez
     let allFutureGames = [];
     
     for (let i = 0; i < 7; i++) {
@@ -1374,7 +1374,7 @@ async function handleFutureGamesAPI(request, env) {
       
       console.log('Buscando jogos futuros para:', dateStr);
       
-      // Usar parâmetros corretos da API Football
+      // Usar parametros corretos da API Football
       const apiFootballUrl = `https://v3.football.api-sports.io/fixtures?date=${dateStr}&status=NS&timezone=Europe/Lisbon`;
 
       console.log('URL da API:', apiFootballUrl);
@@ -1410,7 +1410,7 @@ async function handleFutureGamesAPI(request, env) {
     }
     
     console.log('Total jogos futuros encontrados:', allFutureGames.length);
-    addCommentatorLog(`📅 ${allFutureGames.length} jogos futuros carregados da API Football`, 'info');
+    addCommentatorLog(` ${allFutureGames.length} jogos futuros carregados da API Football`, 'info');
 
     // SEM JOGOS DE EXEMPLO - APENAS DADOS REAIS DA API
 
@@ -1421,7 +1421,7 @@ async function handleFutureGamesAPI(request, env) {
 
   } catch (error) {
     console.error('Error fetching future games:', error);
-    addCommentatorLog(`❌ Erro ao carregar jogos futuros: ${error.message}`, 'error');
+    addCommentatorLog(` Erro ao carregar jogos futuros: ${error.message}`, 'error');
     return new Response(JSON.stringify([]), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -1440,7 +1440,7 @@ async function handleLiveGamesAPI(request, env) {
   try {
     const today = new Date().toISOString().split('T')[0];
     console.log('Buscando jogos ao vivo para:', today);
-    addCommentatorLog(`🔴 Buscando jogos ao vivo para ${today}`, 'info');
+    addCommentatorLog(` Buscando jogos ao vivo para ${today}`, 'info');
     
     let liveGames = [];
 
@@ -1456,7 +1456,7 @@ async function handleLiveGamesAPI(request, env) {
     if (liveResponse.ok) {
       const liveData = await liveResponse.json();
       console.log('API Football LIVE response:', liveData.results, 'jogos');
-      addCommentatorLog(`📊 API Football LIVE: ${liveData.results} jogos encontrados`, 'info');
+      addCommentatorLog(` API Football LIVE: ${liveData.results} jogos encontrados`, 'info');
       
       if (liveData.response && liveData.response.length > 0) {
         const liveGamesData = liveData.response.map(fixture => ({
@@ -1476,7 +1476,7 @@ async function handleLiveGamesAPI(request, env) {
       }
     }
 
-    // Buscar jogos no 1º tempo (1H)
+    // Buscar jogos no 1o tempo (1H)
     const firstHalfUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=1H&timezone=Europe/Lisbon`;
     const firstHalfResponse = await fetch(firstHalfUrl, {
       headers: {
@@ -1488,7 +1488,7 @@ async function handleLiveGamesAPI(request, env) {
     if (firstHalfResponse.ok) {
       const firstHalfData = await firstHalfResponse.json();
       console.log('API Football 1H response:', firstHalfData.results, 'jogos');
-      addCommentatorLog(`📊 API Football 1H: ${firstHalfData.results} jogos encontrados`, 'info');
+      addCommentatorLog(` API Football 1H: ${firstHalfData.results} jogos encontrados`, 'info');
       
       if (firstHalfData.response && firstHalfData.response.length > 0) {
         const firstHalfGames = firstHalfData.response.map(fixture => ({
@@ -1508,7 +1508,7 @@ async function handleLiveGamesAPI(request, env) {
       }
     }
 
-    // Buscar jogos no 2º tempo (2H)
+    // Buscar jogos no 2o tempo (2H)
     const secondHalfUrl = `https://v3.football.api-sports.io/fixtures?date=${today}&status=2H&timezone=Europe/Lisbon`;
     const secondHalfResponse = await fetch(secondHalfUrl, {
       headers: {
@@ -1520,7 +1520,7 @@ async function handleLiveGamesAPI(request, env) {
     if (secondHalfResponse.ok) {
       const secondHalfData = await secondHalfResponse.json();
       console.log('API Football 2H response:', secondHalfData.results, 'jogos');
-      addCommentatorLog(`📊 API Football 2H: ${secondHalfData.results} jogos encontrados`, 'info');
+      addCommentatorLog(` API Football 2H: ${secondHalfData.results} jogos encontrados`, 'info');
       
       if (secondHalfData.response && secondHalfData.response.length > 0) {
         const secondHalfGames = secondHalfData.response.map(fixture => ({
@@ -1541,7 +1541,7 @@ async function handleLiveGamesAPI(request, env) {
     }
 
     console.log('Total live games processed:', liveGames.length);
-    addCommentatorLog(`⚽ ${liveGames.length} jogos ao vivo processados no total`, 'info');
+    addCommentatorLog(` ${liveGames.length} jogos ao vivo processados no total`, 'info');
 
 
         return new Response(JSON.stringify(liveGames), {
@@ -1551,7 +1551,7 @@ async function handleLiveGamesAPI(request, env) {
 
       } catch (error) {
         console.error('Error fetching live games:', error);
-    addCommentatorLog(`❌ Erro ao buscar jogos ao vivo: ${error.message}`, 'error');
+    addCommentatorLog(` Erro ao buscar jogos ao vivo: ${error.message}`, 'error');
         return new Response(JSON.stringify([]), {
           status: 200,
           headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -1559,7 +1559,7 @@ async function handleLiveGamesAPI(request, env) {
       }
     }
 
-    // Função para buscar jogos terminados (apenas para atualizar sinais)
+    // Funcao para buscar jogos terminados (apenas para atualizar sinais)
     async function handleFinishedGamesAPI(request, env) {
       const CORS_HEADERS = {
         'Access-Control-Allow-Origin': '*',
@@ -1618,7 +1618,7 @@ async function handleLiveGamesAPI(request, env) {
     }
 }
 
-// API para jogos passados (últimos 7 dias)
+// API para jogos passados (ultimos 7 dias)
 async function handlePastGamesAPI(request, env) {
   const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -1628,10 +1628,10 @@ async function handlePastGamesAPI(request, env) {
 
   try {
     const url = new URL(request.url);
-    const days = parseInt(url.searchParams.get('days')) || 7; // Padrão: últimos 7 dias
+    const days = parseInt(url.searchParams.get('days')) || 7; // Padrao: ultimos 7 dias
     
-    console.log(`Buscando jogos passados dos últimos ${days} dias...`);
-    addCommentatorLog(`📅 Buscando jogos passados dos últimos ${days} dias`, 'info');
+    console.log(`Buscando jogos passados dos ultimos ${days} dias...`);
+    addCommentatorLog(` Buscando jogos passados dos ultimos ${days} dias`, 'info');
 
     let allPastGames = [];
     
@@ -1680,7 +1680,7 @@ async function handlePastGamesAPI(request, env) {
     }
     
     console.log('Total jogos passados encontrados:', allPastGames.length);
-    addCommentatorLog(`📊 ${allPastGames.length} jogos passados carregados da API Football`, 'info');
+    addCommentatorLog(` ${allPastGames.length} jogos passados carregados da API Football`, 'info');
 
     return new Response(JSON.stringify(allPastGames), {
       status: 200,
@@ -1689,7 +1689,7 @@ async function handlePastGamesAPI(request, env) {
 
   } catch (error) {
     console.error('Error fetching past games:', error);
-    addCommentatorLog(`❌ Erro ao carregar jogos passados: ${error.message}`, 'error');
+    addCommentatorLog(` Erro ao carregar jogos passados: ${error.message}`, 'error');
         return new Response(JSON.stringify([]), {
           status: 200,
           headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -1697,7 +1697,7 @@ async function handlePastGamesAPI(request, env) {
       }
     }
 
-// Função para verificar e atualizar sinais automaticamente
+// Funcao para verificar e atualizar sinais automaticamente
 function startSignalUpdateChecker(env) {
   // Verificar jogos terminados a cada 2 minutos
   setInterval(async () => {
@@ -1733,7 +1733,7 @@ function startSignalUpdateChecker(env) {
               for (const signal of pendingSignals) {
                 let newStatus = 'red'; // Default para red
                 
-                // Lógica simples para determinar green/red baseado na previsão
+                // Logica simples para determinar green/red baseado na previsao
                 if (signal.prediction) {
                   const prediction = signal.prediction.toLowerCase();
                   
@@ -1756,7 +1756,7 @@ function startSignalUpdateChecker(env) {
                 signal.away_score = awayScore;
                 signal.updated_at = new Date().toISOString();
                 
-                // Enviar atualização para Telegram
+                // Enviar atualizacao para Telegram
                 await updateSignalInTelegram(env, signal, newStatus);
                 
                 // Adicionar ao tracking
@@ -1772,12 +1772,12 @@ function startSignalUpdateChecker(env) {
                   timestamp: new Date().toISOString()
                 });
                 
-                addCommentatorLog(`🔄 Sinal atualizado: ${signal.home_team} vs ${signal.away_team} - ${newStatus.toUpperCase()}`, 'info');
+                addCommentatorLog(` Sinal atualizado: ${signal.home_team} vs ${signal.away_team} - ${newStatus.toUpperCase()}`, 'info');
               }
             }
           }
           
-          addCommentatorLog(`🔄 Verificados ${data.results} jogos terminados - ${storage.signals.filter(s => s.status === 'pending').length} sinais pendentes`, 'info');
+          addCommentatorLog(` Verificados ${data.results} jogos terminados - ${storage.signals.filter(s => s.status === 'pending').length} sinais pendentes`, 'info');
         }
       }
     } catch (error) {
@@ -1786,33 +1786,33 @@ function startSignalUpdateChecker(env) {
   }, 120000); // A cada 2 minutos
 }
 
-// Funções para cron jobs
+// Funcoes para cron jobs
 async function checkUpcomingNotifications(env) {
   try {
     if (!storage.notificationSettings.enabled) {
       return;
     }
     
-    console.log('Verificando notificações de jogos próximos...');
+    console.log('Verificando notificacoes de jogos proximos...');
     
     const now = new Date();
     const advanceTime = storage.notificationSettings.advanceTime || 30;
     
-    // Buscar jogos que começam nos próximos X minutos
+    // Buscar jogos que comecam nos proximos X minutos
     const upcomingGames = storage.futureGames.filter(game => {
       const gameTime = new Date(game.date);
       const timeDiff = gameTime.getTime() - now.getTime();
       const minutesDiff = timeDiff / (1000 * 60);
       
-      // Jogo está entre agora e o tempo de antecipação (com margem de 2 minutos)
+      // Jogo esta entre agora e o tempo de antecipacao (com margem de 2 minutos)
       return minutesDiff >= 0 && minutesDiff <= (advanceTime + 2) && 
              storage.notificationSettings.leagues.includes(game.league);
     });
     
-    console.log('Jogos próximos encontrados:', upcomingGames.length);
+    console.log('Jogos proximos encontrados:', upcomingGames.length);
     
     for (const game of upcomingGames) {
-      // Verificar se já foi notificado nas últimas 2 horas
+      // Verificar se ja foi notificado nas ultimas 2 horas
       const alreadyNotified = storage.notifications.some(notif => 
         notif.gameId === game.id && 
         notif.type === 'upcoming' &&
@@ -1822,19 +1822,19 @@ async function checkUpcomingNotifications(env) {
       if (!alreadyNotified) {
         const message = game.home_team + ' vs ' + game.away_team + ' (' + game.league + ')';
         
-        console.log('Enviando notificação para:', message);
+        console.log('Enviando notificacao para:', message);
         
-        // Enviar notificação via Telegram
+        // Enviar notificacao via Telegram
         if (storage.notificationSettings.telegramEnabled) {
-          const telegramMessage = '🔔 <b>JOGO PRÓXIMO</b>\n\n' +
-                                '⚽ <b>Jogo:</b> ' + game.home_team + ' vs ' + game.away_team + '\n' +
-                                '🏆 <b>Liga:</b> ' + game.league + '\n' +
-                                '⏰ <b>Início:</b> ' + new Date(game.date).toLocaleString('pt-PT') + '\n' +
-                                '⏳ <b>Faltam:</b> ' + Math.round((new Date(game.date).getTime() - now.getTime()) / (1000 * 60)) + ' minutos';
+          const telegramMessage = ' <b>JOGO PROXIMO</b>\n\n' +
+                                ' <b>Jogo:</b> ' + game.home_team + ' vs ' + game.away_team + '\n' +
+                                ' <b>Liga:</b> ' + game.league + '\n' +
+                                '[TEMPO] <b>Inicio:</b> ' + new Date(game.date).toLocaleString('pt-PT') + '\n' +
+                                '[AGUARDANDO] <b>Faltam:</b> ' + Math.round((new Date(game.date).getTime() - now.getTime()) / (1000 * 60)) + ' minutos';
           
           const sent = await sendTelegramMessage(env, telegramMessage);
           
-          // Guardar notificação no histórico
+          // Guardar notificacao no historico
           const notification = {
             id: Date.now().toString(),
             gameId: game.id,
@@ -1848,27 +1848,27 @@ async function checkUpcomingNotifications(env) {
           storage.notifications.push(notification);
           
           if (sent) {
-            addCommentatorLog('🔔 Notificação enviada: ' + message, 'success');
+            addCommentatorLog(' Notificacao enviada: ' + message, 'success');
             logNotificationSent(notification, 'system');
           } else {
-            addCommentatorLog('❌ Falha ao enviar notificação: ' + message, 'error');
-            logApiFailure('TELEGRAM_NOTIFICATION', new Error('Falha ao enviar notificação'), message);
+            addCommentatorLog(' Falha ao enviar notificacao: ' + message, 'error');
+            logApiFailure('TELEGRAM_NOTIFICATION', new Error('Falha ao enviar notificacao'), message);
           }
         }
       }
     }
     
-    // Manter apenas as últimas 100 notificações
+    // Manter apenas as ultimas 100 notificacoes
     if (storage.notifications.length > 100) {
       storage.notifications = storage.notifications.slice(-100);
     }
     
-    // Atualizar último check
+    // Atualizar ultimo check
     storage.notificationSettings.lastNotificationCheck = new Date().toISOString();
     
   } catch (error) {
     console.error('Erro no cron checkUpcomingNotifications:', error);
-    addCommentatorLog('❌ Erro ao verificar notificações: ' + error.message, 'error');
+    addCommentatorLog(' Erro ao verificar notificacoes: ' + error.message, 'error');
   }
 }
 
@@ -1889,7 +1889,7 @@ async function checkLiveGames(env) {
       const data = await response.json();
       if (data.response && data.response.length > 0) {
         console.log(`Cron: ${data.results} jogos ao vivo encontrados`);
-        addCommentatorLog(`⚡ Cron: ${data.results} jogos ao vivo ativos`, 'info');
+        addCommentatorLog(` Cron: ${data.results} jogos ao vivo ativos`, 'info');
       }
     }
   } catch (error) {
@@ -1914,7 +1914,7 @@ async function checkFinishedGames(env) {
       const data = await response.json();
       if (data.response && data.response.length > 0) {
         console.log(`Cron: ${data.results} jogos terminados encontrados`);
-        addCommentatorLog(`🏁 Cron: ${data.results} jogos terminados - verificando sinais`, 'info');
+        addCommentatorLog(` Cron: ${data.results} jogos terminados - verificando sinais`, 'info');
       }
     }
   } catch (error) {
@@ -1924,12 +1924,12 @@ async function checkFinishedGames(env) {
 
 async function generateDailyReport(env) {
   try {
-    console.log('Cron: Gerando relatório diário...');
-    addCommentatorLog('📊 Cron: Gerando relatório diário às 23:59', 'info');
+    console.log('Cron: Gerando relatorio diario...');
+    addCommentatorLog(' Cron: Gerando relatorio diario as 23:59', 'info');
     
     const today = new Date().toISOString().split('T')[0];
     
-    // Calcular estatísticas do dia
+    // Calcular estatisticas do dia
     const todaySignals = storage.signals.filter(signal => {
       const signalDate = new Date(signal.date).toISOString().split('T')[0];
       return signalDate === today;
@@ -1940,7 +1940,7 @@ async function generateDailyReport(env) {
     const pendingCount = todaySignals.filter(s => s.status === 'pending').length;
     const totalCount = todaySignals.length;
     
-    // Atualizar estatísticas diárias
+    // Atualizar estatisticas diarias
     storage.dailyStats = {
       date: today,
       totalSignals: totalCount,
@@ -1949,26 +1949,26 @@ async function generateDailyReport(env) {
       pendingSignals: pendingCount
     };
     
-    // Gerar relatório
+    // Gerar relatorio
     const winRate = totalCount > 0 ? ((greenCount / totalCount) * 100).toFixed(1) : 0;
     
-    const reportMessage = `📊 <b>RELATÓRIO DIÁRIO - ${today}</b>\n\n` +
-                         `🎯 <b>Resumo do Dia:</b>\n` +
-                         `📈 Total de Sinais: ${totalCount}\n` +
-                         `🟢 Greens: ${greenCount}\n` +
-                         `🔴 Reds: ${redCount}\n` +
-                         `🟡 Pendentes: ${pendingCount}\n\n` +
-                         `📊 <b>Taxa de Acerto:</b> ${winRate}%\n\n` +
-                         `⏰ <b>Gerado em:</b> ${new Date().toLocaleString('pt-PT')}\n\n` +
-                         `🤖 <i>Alert@Postas - Sistema Automático</i>`;
+    const reportMessage = ` <b>RELATORIO DIARIO - ${today}</b>\n\n` +
+                         ` <b>Resumo do Dia:</b>\n` +
+                         ` Total de Sinais: ${totalCount}\n` +
+                         ` Greens: ${greenCount}\n` +
+                         ` Reds: ${redCount}\n` +
+                         ` Pendentes: ${pendingCount}\n\n` +
+                         ` <b>Taxa de Acerto:</b> ${winRate}%\n\n` +
+                         `[TEMPO] <b>Gerado em:</b> ${new Date().toLocaleString('pt-PT')}\n\n` +
+                         ` <i>Alert@Postas - Sistema Automatico</i>`;
     
     // Enviar para Telegram
     const telegramSent = await sendTelegramMessage(env, reportMessage);
     
     if (telegramSent) {
-      addCommentatorLog('✅ Relatório diário enviado para Telegram com sucesso', 'success');
+      addCommentatorLog(' Relatorio diario enviado para Telegram com sucesso', 'success');
     } else {
-      addCommentatorLog('❌ Erro ao enviar relatório diário para Telegram', 'error');
+      addCommentatorLog(' Erro ao enviar relatorio diario para Telegram', 'error');
     }
     
     // Adicionar ao tracking
@@ -1981,11 +1981,11 @@ async function generateDailyReport(env) {
       timestamp: new Date().toISOString()
     });
     
-    console.log('Relatório diário gerado:', storage.dailyStats);
+    console.log('Relatorio diario gerado:', storage.dailyStats);
     
   } catch (error) {
     console.error('Erro no cron generateDailyReport:', error);
-    addCommentatorLog(`❌ Erro ao gerar relatório diário: ${error.message}`, 'error');
+    addCommentatorLog(` Erro ao gerar relatorio diario: ${error.message}`, 'error');
   }
 }
 
@@ -2014,7 +2014,7 @@ async function handleCommentatorAPI(request, env) {
     };
     storage.commentatorLogs.push(logEntry);
     
-    // Manter apenas os últimos 100 logs
+    // Manter apenas os ultimos 100 logs
     if (storage.commentatorLogs.length > 100) {
       storage.commentatorLogs = storage.commentatorLogs.slice(-100);
     }
@@ -2058,9 +2058,9 @@ async function handleBotControlAPI(request, env) {
     if (action === 'start') {
       storage.botStatus = 'running';
       // Adicionar log ao comentador
-      addCommentatorLog('🤖 Bot iniciado - Enviando sinais em tempo real', 'success');
+      addCommentatorLog(' Bot iniciado - Enviando sinais em tempo real', 'success');
       
-      // Iniciar verificação automática de jogos terminados para atualizar sinais
+      // Iniciar verificacao automatica de jogos terminados para atualizar sinais
       startSignalUpdateChecker(env);
       
       return new Response(JSON.stringify({ success: true, message: 'Bot iniciado - Enviando sinais em tempo real' }), {
@@ -2072,7 +2072,7 @@ async function handleBotControlAPI(request, env) {
     if (action === 'stop') {
       storage.botStatus = 'stopped';
       // Adicionar log ao comentador
-      addCommentatorLog('⏹️ Bot parado - Sinais suspensos', 'warning');
+      addCommentatorLog('[PARAR] Bot parado - Sinais suspensos', 'warning');
       return new Response(JSON.stringify({ success: true, message: 'Bot parado - Sinais suspensos' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -2081,12 +2081,12 @@ async function handleBotControlAPI(request, env) {
     
     if (action === 'analyze') {
       // Adicionar log ao comentador
-      addCommentatorLog('🔍 Análise de jogos iniciada (sem envio de sinais)', 'info');
-      // Simular análise
+      addCommentatorLog(' Analise de jogos iniciada (sem envio de sinais)', 'info');
+      // Simular analise
       setTimeout(() => {
-        addCommentatorLog('✅ Análise concluída - 5 jogos analisados', 'success');
+        addCommentatorLog(' Analise concluida - 5 jogos analisados', 'success');
       }, 2000);
-      return new Response(JSON.stringify({ success: true, message: 'Análise iniciada - Apenas análise, sem envio de sinais' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Analise iniciada - Apenas analise, sem envio de sinais' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
       });
@@ -2099,7 +2099,7 @@ async function handleBotControlAPI(request, env) {
   });
 }
 
-// API para estatísticas
+// API para estatisticas
 async function handleStatsAPI(request, env) {
   const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -2126,7 +2126,7 @@ async function handleStatsAPI(request, env) {
   });
 }
 
-// API para relatório diário
+// API para relatorio diario
 async function handleDailyReportAPI(request, env) {
   const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -2138,7 +2138,7 @@ async function handleDailyReportAPI(request, env) {
       const url = new URL(request.url);
     const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
     
-    // Buscar relatórios do dia especificado
+    // Buscar relatorios do dia especificado
     const dayReports = storage.signalTracking.filter(track => 
       track.type === 'daily_report' && track.date === date
     );
@@ -2183,7 +2183,7 @@ async function handleDailyReportAPI(request, env) {
   }
 }
 
-// Função auxiliar para adicionar logs ao comentador
+// Funcao auxiliar para adicionar logs ao comentador
 function addCommentatorLog(message, type = 'info') {
   const logEntry = {
     id: Date.now().toString(),
@@ -2193,20 +2193,20 @@ function addCommentatorLog(message, type = 'info') {
   };
   storage.commentatorLogs.push(logEntry);
   
-  // Manter apenas os últimos 100 logs
+  // Manter apenas os ultimos 100 logs
   if (storage.commentatorLogs.length > 100) {
     storage.commentatorLogs = storage.commentatorLogs.slice(-100);
   }
 }
 
-// Função para enviar mensagem para o Telegram
+// Funcao para enviar mensagem para o Telegram
 async function sendTelegramMessage(env, message, parseMode = 'HTML') {
   const timestamp = new Date().toISOString();
   
   try {
-    // Verificar se as credenciais estão configuradas
+    // Verificar se as credenciais estao configuradas
     if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_GROUP_ID) {
-      const errorMsg = 'Credenciais do Telegram não configuradas';
+      const errorMsg = 'Credenciais do Telegram nao configuradas';
       console.error(`[${timestamp}] TELEGRAM_ERROR: ${errorMsg}`);
       
       const logEntry = {
@@ -2284,20 +2284,20 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
   }
 }
 
-// Função para atualizar sinal no Telegram
+// Funcao para atualizar sinal no Telegram
         async function updateSignalInTelegram(env, signal, newStatus) {
             try {
-                const statusEmoji = newStatus === 'green' ? '🟢' : newStatus === 'red' ? '🔴' : '🟡';
+                const statusEmoji = newStatus === 'green' ? '' : newStatus === 'red' ? '' : '';
                 const statusText = newStatus === 'green' ? 'GREEN' : newStatus === 'red' ? 'RED' : 'PENDING';
                 
-                const message = `📊 <b>ATUALIZAÇÃO DE SINAL</b>\n\n` +
-                               `🎯 <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
-                               `🏆 <b>Liga:</b> ${signal.league}\n` +
-                               `📅 <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
-                               `⚽ <b>Resultado:</b> ${signal.home_score || 0} - ${signal.away_score || 0}\n` +
-                               `🎯 <b>Previsão:</b> ${signal.prediction || 'N/A'}\n` +
-                               `📈 <b>Status:</b> ${statusEmoji} ${statusText}\n` +
-                               `⏰ <b>Atualizado:</b> ${new Date().toLocaleString('pt-PT')}`;
+                const message = ` <b>ATUALIZACAO DE SINAL</b>\n\n` +
+                               ` <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
+                               ` <b>Liga:</b> ${signal.league}\n` +
+                               ` <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
+                               ` <b>Resultado:</b> ${signal.home_score || 0} - ${signal.away_score || 0}\n` +
+                               ` <b>Previsao:</b> ${signal.prediction || 'N/A'}\n` +
+                               ` <b>Status:</b> ${statusEmoji} ${statusText}\n` +
+                               `[TEMPO] <b>Atualizado:</b> ${new Date().toLocaleString('pt-PT')}`;
                 
                 return await sendTelegramMessage(env, message);
             } catch (error) {
@@ -2309,33 +2309,33 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
         async function sendSignalWithExplanation(env, signal) {
             try {
                 // Mensagem principal do sinal
-                const mainMessage = `🚨 <b>NOVO SINAL</b>\n\n` +
-                                   `🎯 <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
-                                   `🏆 <b>Liga:</b> ${signal.league}\n` +
-                                   `📅 <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
-                                   `🎯 <b>Previsão:</b> ${signal.prediction}\n` +
-                                   `📊 <b>Confiança:</b> ${signal.confidence}%\n` +
-                                   `⏰ <b>Criado:</b> ${new Date().toLocaleString('pt-PT')}`;
+                const mainMessage = ` <b>NOVO SINAL</b>\n\n` +
+                                   ` <b>Jogo:</b> ${signal.home_team} vs ${signal.away_team}\n` +
+                                   ` <b>Liga:</b> ${signal.league}\n` +
+                                   ` <b>Data:</b> ${new Date(signal.date).toLocaleDateString('pt-PT')}\n` +
+                                   ` <b>Previsao:</b> ${signal.prediction}\n` +
+                                   ` <b>Confianca:</b> ${signal.confidence}%\n` +
+                                   `[TEMPO] <b>Criado:</b> ${new Date().toLocaleString('pt-PT')}`;
                 
                 const mainSent = await sendTelegramMessage(env, mainMessage);
                 
                 if (mainSent && signal.explanation) {
-                    // Mensagem secundária com explicação
+                    // Mensagem secundaria com explicacao
                     const explanation = signal.explanation;
-                    const explanationMessage = `🧠 <b>EXPLICAÇÃO DO SINAL</b>\n\n` +
-                                              `📈 <b>Estatísticas das Equipas:</b>\n` +
-                                              `🏠 ${explanation.teamStats.homeTeam.name}: ${explanation.teamStats.homeTeam.avgGoalsScored} golos/jogo (média)\n` +
-                                              `✈️ ${explanation.teamStats.awayTeam.name}: ${explanation.teamStats.awayTeam.avgGoalsScored} golos/jogo (média)\n\n` +
-                                              `🔄 <b>Forma Recente:</b>\n` +
-                                              `🏠 Casa: ${explanation.recentForm.homeForm}\n` +
-                                              `✈️ Fora: ${explanation.recentForm.awayForm}\n\n` +
-                                              `⚔️ <b>Confrontos Diretos:</b>\n` +
-                                              `📊 Últimos ${explanation.headToHead.totalMeetings} jogos: ${explanation.headToHead.homeWins}V-${explanation.headToHead.draws}E-${explanation.headToHead.awayWins}D\n` +
-                                              `⚽ Média de golos: ${explanation.headToHead.avgGoalsPerGame}\n\n` +
-                                              `💡 <b>Razões da Análise:</b>\n` +
-                                              explanation.reasoning.map(reason => `• ${reason}`).join('\n');
+                    const explanationMessage = ` <b>EXPLICACAO DO SINAL</b>\n\n` +
+                                              ` <b>Estatisticas das Equipas:</b>\n` +
+                                              ` ${explanation.teamStats.homeTeam.name}: ${explanation.teamStats.homeTeam.avgGoalsScored} golos/jogo (media)\n` +
+                                              ` ${explanation.teamStats.awayTeam.name}: ${explanation.teamStats.awayTeam.avgGoalsScored} golos/jogo (media)\n\n` +
+                                              ` <b>Forma Recente:</b>\n` +
+                                              ` Casa: ${explanation.recentForm.homeForm}\n` +
+                                              ` Fora: ${explanation.recentForm.awayForm}\n\n` +
+                                              ` <b>Confrontos Diretos:</b>\n` +
+                                              ` Ultimos ${explanation.headToHead.totalMeetings} jogos: ${explanation.headToHead.homeWins}V-${explanation.headToHead.draws}E-${explanation.headToHead.awayWins}D\n` +
+                                              ` Media de golos: ${explanation.headToHead.avgGoalsPerGame}\n\n` +
+                                              ` <b>Razoes da Analise:</b>\n` +
+                                              explanation.reasoning.map(reason => `- ${reason}`).join('\n');
                     
-                    // Enviar explicação 2 segundos depois
+                    // Enviar explicacao 2 segundos depois
                     setTimeout(async () => {
                         await sendTelegramMessage(env, explanationMessage);
                     }, 2000);
@@ -2343,14 +2343,14 @@ async function sendTelegramMessage(env, message, parseMode = 'HTML') {
                 
                 return mainSent;
   } catch (error) {
-                console.error('Erro ao enviar sinal com explicação:', error);
+                console.error('Erro ao enviar sinal com explicacao:', error);
                 return false;
             }
         }
 
-// API de utilizadores removida - SISTEMA SEM AUTENTICAÇÃO
+// API de utilizadores removida - SISTEMA SEM AUTENTICACAO
 
-// HTML do Dashboard SEM AUTENTICAÇÃO
+// HTML do Dashboard SEM AUTENTICACAO
 function getDashboardHTML() {
   return `<!DOCTYPE html>
 <html lang="pt" class="h-full dark">
@@ -2384,28 +2384,28 @@ function getDashboardHTML() {
            </div>
                         <div class="flex items-center space-x-4">
                             <button id="historyBtn" class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-2 rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">📊</span>
-                                Histórico
+                                <span class="text-lg"></span>
+                                Historico
                             </button>
                             <button id="notificationsBtn" class="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-4 py-2 rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">🔔</span>
-                                Notificações
+                                <span class="text-lg"></span>
+                                Notificacoes
                             </button>
                             <button id="logsBtn" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">📋</span>
+                                <span class="text-lg"></span>
                                 Logs
                             </button>
                             <button id="subscriptionBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">💳</span>
-                                Subscrição
+                                <span class="text-lg"></span>
+                                Subscricao
                             </button>
                             <button id="subscriptionAdminBtn" class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-4 py-2 rounded-lg hover:from-yellow-700 hover:to-yellow-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">👑</span>
+                                <span class="text-lg"></span>
                                 Admin
                             </button>
                             <button id="settingsBtn" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">⚙️</span>
-                                Configurações
+                                <span class="text-lg"></span>
+                                Configuracoes
                             </button>
                         </div>
                     </div>
@@ -2419,11 +2419,11 @@ function getDashboardHTML() {
                 <div class="flex items-center justify-between mb-8">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <span class="text-2xl">🤖</span>
+                            <span class="text-2xl"></span>
                         </div>
                         <div>
                             <h2 class="text-2xl font-bold text-white">Controlo do Bot</h2>
-                            <p class="text-gray-400 text-sm">Gerir operações e módulos de IA</p>
+                            <p class="text-gray-400 text-sm">Gerir operacoes e modulos de IA</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3 bg-gray-800/50 rounded-lg px-4 py-2 border border-gray-600/50">
@@ -2435,19 +2435,19 @@ function getDashboardHTML() {
                 <!-- Main Control Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
-                    <!-- Operações Principais -->
+                    <!-- Operacoes Principais -->
                     <div class="lg:col-span-2">
                         <div class="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
                             <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                                 <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                                    <span class="text-sm">⚙️</span>
+                                    <span class="text-sm"></span>
                                 </div>
-                                Operações Principais
+                                Operacoes Principais
                             </h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <button id="startBot" class="group bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-green-500/25 font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 disabled:hover:scale-100">
                                     <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                                        <span class="text-lg">🚀</span>
+                                        <span class="text-lg"></span>
                                     </div>
                                     <div class="text-left">
                                         <div class="font-semibold">Iniciar Bot</div>
@@ -2457,7 +2457,7 @@ function getDashboardHTML() {
                                 
                                 <button id="stopBot" class="group bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-red-500/25 font-medium flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 disabled:hover:scale-100">
                                     <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                                        <span class="text-lg">⏹️</span>
+                                        <span class="text-lg">[PARAR]</span>
                                     </div>
                                     <div class="text-left">
                                         <div class="font-semibold">Parar Bot</div>
@@ -2467,7 +2467,7 @@ function getDashboardHTML() {
                                 
                                 <button id="analyzeGames" class="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-blue-500/25 font-medium flex items-center justify-center gap-3 transform hover:scale-105">
                                     <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                                        <span class="text-lg">🔍</span>
+                                        <span class="text-lg"></span>
                                     </div>
                                     <div class="text-left">
                                         <div class="font-semibold">Analisar Jogos</div>
@@ -2477,7 +2477,7 @@ function getDashboardHTML() {
                                 
                                 <button id="refreshToken" class="group bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25 font-medium flex items-center justify-center gap-3 transform hover:scale-105">
                                     <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                                        <span class="text-lg">🔄</span>
+                                        <span class="text-lg"></span>
                                     </div>
                                     <div class="text-left">
                                         <div class="font-semibold">Atualizar Token</div>
@@ -2488,13 +2488,13 @@ function getDashboardHTML() {
                         </div>
                     </div>
 
-                    <!-- Status e Estatísticas -->
+                    <!-- Status e Estatisticas -->
                     <div class="space-y-6">
                         <!-- Status do Sistema -->
                         <div class="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
                             <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                                 <div class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                                    <span class="text-sm">📊</span>
+                                    <span class="text-sm"></span>
                                 </div>
                                 Status do Sistema
                             </h3>
@@ -2508,19 +2508,19 @@ function getDashboardHTML() {
                                     <span class="text-sm text-gray-300">00:00:00</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-400">Última Atividade:</span>
+                                    <span class="text-sm text-gray-400">Ultima Atividade:</span>
                                     <span class="text-sm text-gray-300">Nunca</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Estatísticas Rápidas -->
+                        <!-- Estatisticas Rapidas -->
                         <div class="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
                             <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                                 <div class="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
-                                    <span class="text-sm">📈</span>
+                                    <span class="text-sm"></span>
                                 </div>
-                                Estatísticas
+                                Estatisticas
                             </h3>
                             <div class="space-y-3">
                                 <div class="flex justify-between items-center">
@@ -2528,11 +2528,11 @@ function getDashboardHTML() {
                                     <span id="signalsGenerated" class="text-sm font-bold text-blue-400">0</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-400">Precisão ML:</span>
+                                    <span class="text-sm text-gray-400">Precisao ML:</span>
                                     <span id="mlAccuracy" class="text-sm font-bold text-green-400">0%</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-400">Módulos Ativos:</span>
+                                    <span class="text-sm text-gray-400">Modulos Ativos:</span>
                                     <span id="activeModules" class="text-sm font-bold text-purple-400">0</span>
                                 </div>
                             </div>
@@ -2540,15 +2540,15 @@ function getDashboardHTML() {
                     </div>
                 </div>
 
-                <!-- Módulos de Inteligência Artificial -->
+                <!-- Modulos de Inteligencia Artificial -->
                 <div class="mt-8">
                     <div class="flex items-center gap-4 mb-6">
                         <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <span class="text-xl">🧠</span>
+                            <span class="text-xl"></span>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">Módulos de Inteligência Artificial</h3>
-                            <p class="text-gray-400 text-sm">Ativar e monitorizar módulos de ML</p>
+                            <h3 class="text-xl font-bold text-white">Modulos de Inteligencia Artificial</h3>
+                            <p class="text-gray-400 text-sm">Ativar e monitorizar modulos de ML</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2558,11 +2558,11 @@ function getDashboardHTML() {
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-blue-500/25 transition-shadow">
-                                    <span class="text-xl">📊</span>
+                                    <span class="text-xl"></span>
                                 </div>
                                 <div>
                                     <h4 class="text-lg font-bold text-white">ML Over/Under</h4>
-                                    <p class="text-sm text-blue-300">Análise de golos com Machine Learning</p>
+                                    <p class="text-sm text-blue-300">Analise de golos com Machine Learning</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -2572,7 +2572,7 @@ function getDashboardHTML() {
                         </div>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Precisão:</span>
+                                <span class="text-sm text-gray-300">Precisao:</span>
                                 <span class="text-sm font-bold text-green-400" id="overUnderAccuracy">87%</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
@@ -2580,7 +2580,7 @@ function getDashboardHTML() {
                                 <span class="text-sm font-bold text-blue-400" id="overUnderSignals">12</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Última Previsão:</span>
+                                <span class="text-sm text-gray-300">Ultima Previsao:</span>
                                 <span class="text-sm text-gray-400" id="overUnderLastPrediction">Over 2.5 (85%)</span>
                             </div>
                         </div>
@@ -2591,11 +2591,11 @@ function getDashboardHTML() {
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-green-500/25 transition-shadow">
-                                    <span class="text-xl">🏆</span>
+                                    <span class="text-xl"></span>
                                 </div>
                                 <div>
                                     <h4 class="text-lg font-bold text-white">ML Winner</h4>
-                                    <p class="text-sm text-green-300">Previsão de vencedor com IA</p>
+                                    <p class="text-sm text-green-300">Previsao de vencedor com IA</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -2605,7 +2605,7 @@ function getDashboardHTML() {
                         </div>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Precisão:</span>
+                                <span class="text-sm text-gray-300">Precisao:</span>
                                 <span class="text-sm font-bold text-green-400" id="winnerAccuracy">92%</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
@@ -2613,7 +2613,7 @@ function getDashboardHTML() {
                                 <span class="text-sm font-bold text-green-400" id="winnerSignals">8</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Última Previsão:</span>
+                                <span class="text-sm text-gray-300">Ultima Previsao:</span>
                                 <span class="text-sm text-gray-400" id="winnerLastPrediction">Casa (78%)</span>
                             </div>
                         </div>
@@ -2624,11 +2624,11 @@ function getDashboardHTML() {
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow">
-                                    <span class="text-xl">💰</span>
+                                    <span class="text-xl"></span>
                                 </div>
                                 <div>
                                     <h4 class="text-lg font-bold text-white">Value Bet</h4>
-                                    <p class="text-sm text-purple-300">Detecção de apostas de valor</p>
+                                    <p class="text-sm text-purple-300">Deteccao de apostas de valor</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -2638,7 +2638,7 @@ function getDashboardHTML() {
                         </div>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Valor Médio:</span>
+                                <span class="text-sm text-gray-300">Valor Medio:</span>
                                 <span class="text-sm font-bold text-purple-400" id="valueBetAvgValue">+15%</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
@@ -2646,7 +2646,7 @@ function getDashboardHTML() {
                                 <span class="text-sm font-bold text-purple-400" id="valueBetOpportunities">5</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Última Descoberta:</span>
+                                <span class="text-sm text-gray-300">Ultima Descoberta:</span>
                                 <span class="text-sm text-gray-400" id="valueBetLastFind">Over 2.5 @ 2.1</span>
                             </div>
                         </div>
@@ -2657,11 +2657,11 @@ function getDashboardHTML() {
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-orange-500/25 transition-shadow">
-                                    <span class="text-xl">⚽</span>
+                                    <span class="text-xl"></span>
                                 </div>
                                 <div>
                                     <h4 class="text-lg font-bold text-white">Next Goal</h4>
-                                    <p class="text-sm text-orange-300">Previsão do próximo golo</p>
+                                    <p class="text-sm text-orange-300">Previsao do proximo golo</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -2671,15 +2671,15 @@ function getDashboardHTML() {
                         </div>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Precisão:</span>
+                                <span class="text-sm text-gray-300">Precisao:</span>
                                 <span class="text-sm font-bold text-orange-400" id="nextGoalAccuracy">79%</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Previsões Hoje:</span>
+                                <span class="text-sm text-gray-300">Previsoes Hoje:</span>
                                 <span class="text-sm font-bold text-orange-400" id="nextGoalPredictions">6</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Última Previsão:</span>
+                                <span class="text-sm text-gray-300">Ultima Previsao:</span>
                                 <span class="text-sm text-gray-400" id="nextGoalLastPrediction">Casa (72%)</span>
                             </div>
                         </div>
@@ -2690,11 +2690,11 @@ function getDashboardHTML() {
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-indigo-500/25 transition-shadow">
-                                    <span class="text-xl">🎯</span>
+                                    <span class="text-xl"></span>
                                 </div>
                                 <div>
-                                    <h4 class="text-lg font-bold text-white">Múltiplas Apostas</h4>
-                                    <p class="text-sm text-indigo-300">Combinações inteligentes de apostas</p>
+                                    <h4 class="text-lg font-bold text-white">Multiplas Apostas</h4>
+                                    <p class="text-sm text-indigo-300">Combinacoes inteligentes de apostas</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -2704,7 +2704,7 @@ function getDashboardHTML() {
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                                <span class="text-sm text-gray-300">Combinações:</span>
+                                <span class="text-sm text-gray-300">Combinacoes:</span>
                                 <span class="text-sm font-bold text-indigo-400" id="multipleCombinations">3</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
@@ -2726,11 +2726,11 @@ function getDashboardHTML() {
                     <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 border border-gray-600">
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                                <span class="text-2xl">🔴</span>
+                                <span class="text-2xl"></span>
                                 Jogos ao Vivo
                             </h2>
                             <button id="refreshLiveGames" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-red-500/25 font-medium flex items-center gap-2">
-                                <span class="text-lg">🔄</span>
+                                <span class="text-lg"></span>
                                 Atualizar
                             </button>
                         </div>
@@ -2746,18 +2746,18 @@ function getDashboardHTML() {
                     <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 border border-gray-600">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-3">
-                                <span class="text-2xl">📅</span>
-                                <h2 class="text-xl font-bold text-white">Seleção de Dias</h2>
+                                <span class="text-2xl"></span>
+                                <h2 class="text-xl font-bold text-white">Selecao de Dias</h2>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button id="prevWeek" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium">
-                                    ←
+                                    
                                 </button>
                                 <button id="goToday" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 font-medium">
                                     Hoje
                                 </button>
                                 <button id="nextWeek" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium">
-                                    →
+                                    
                                 </button>
                             </div>
                         </div>
@@ -2784,7 +2784,7 @@ function getDashboardHTML() {
                                 <span class="text-lg font-bold" id="date-4">19</span>
                             </div>
                             <div id="day-5" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
-                                <span class="text-xs font-medium text-gray-400">SÁB</span>
+                                <span class="text-xs font-medium text-gray-400">SAB</span>
                                 <span class="text-lg font-bold" id="date-5">20</span>
                             </div>
                             <div id="day-6" class="h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
@@ -2797,7 +2797,7 @@ function getDashboardHTML() {
                         <div class="border-t border-gray-700 pt-4">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-lg">⚽</span>
+                                    <span class="text-lg"></span>
                                     <h3 class="text-lg font-semibold" id="selectedDayTitle">
                                         Jogos - Quinta-feira, 18 de Setembro
                                     </h3>
@@ -2826,33 +2826,33 @@ function getDashboardHTML() {
                                         class="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm"
                                     >
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-400 text-sm">🔍</span>
+                                        <span class="text-gray-400 text-sm"></span>
                                     </div>
                                     <button id="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white hidden">
-                                        <span class="text-lg">✕</span>
+                                        <span class="text-lg"></span>
                                     </button>
                                 </div>
                                 <div id="searchResults" class="text-xs text-gray-400 mt-1 hidden">
-                                    <!-- Resultados da pesquisa aparecerão aqui -->
+                                    <!-- Resultados da pesquisa aparecerao aqui -->
                                 </div>
                             </div>
                             
                             <div id="gamesError" class="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-4 hidden">
-                                <p class="text-red-400 text-sm" id="gamesErrorText">❌ Erro ao carregar jogos</p>
+                                <p class="text-red-400 text-sm" id="gamesErrorText"> Erro ao carregar jogos</p>
                             </div>
 
                             <div id="noGamesMessage" class="text-center py-8 hidden">
                                 <div class="text-gray-400 mb-2">
-                                    <span class="text-4xl mb-4 block">🕐</span>
-                                    <p class="text-lg font-medium">Sem jogos disponíveis</p>
-                                    <p class="text-sm">Não há jogos programados para esta data</p>
+                                    <span class="text-4xl mb-4 block"></span>
+                                    <p class="text-lg font-medium">Sem jogos disponiveis</p>
+                                    <p class="text-sm">Nao ha jogos programados para esta data</p>
                                 </div>
                             </div>
 
                             <!-- Container dos jogos com altura fixa e scroll -->
                             <div class="bg-gray-700/30 rounded-lg border border-gray-600">
                                 <div id="gamesList" class="max-h-80 overflow-y-auto p-3 space-y-2">
-                                    <!-- Jogos serão carregados aqui -->
+                                    <!-- Jogos serao carregados aqui -->
                                 </div>
                             </div>
                             
@@ -2868,16 +2868,16 @@ function getDashboardHTML() {
                 <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">📊</span>
+                            <span class="text-2xl"></span>
                             Sinais Enviados
                         </h2>
                         <div class="flex gap-2">
                             <button id="createMockSignal" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">🧠</span>
+                                <span class="text-lg"></span>
                                 Criar Sinal
                             </button>
                             <button id="clearSignals" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                                <span class="text-lg">🗑️</span>
+                                <span class="text-lg"></span>
                                 Limpar
                         </button>
                     </div>
@@ -2887,33 +2887,33 @@ function getDashboardHTML() {
                     </div>
                 </div>
 
-                <!-- Explicações dos Sinais -->
+                <!-- Explicacoes dos Sinais -->
                 <div id="signalExplanations" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">🧠</span>
-                            Explicação do Sinal
+                            <span class="text-2xl"></span>
+                            Explicacao do Sinal
                         </h2>
                         <button id="closeExplanation" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                     </div>
                     
                     <div id="explanationContent" class="space-y-6">
-                        <!-- Conteúdo será preenchido dinamicamente -->
+                        <!-- Conteudo sera preenchido dinamicamente -->
                     </div>
                 </div>
 
-                <!-- Dashboard Histórico de Performance -->
+                <!-- Dashboard Historico de Performance -->
                 <div id="historyPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">📊</span>
-                            Histórico de Performance
+                            <span class="text-2xl"></span>
+                            Historico de Performance
                         </h2>
                         <button id="closeHistory" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                     </div>
@@ -2921,17 +2921,17 @@ function getDashboardHTML() {
                     <!-- Filtros -->
                     <div class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">🔍</span>
+                            <span class="text-xl"></span>
                             Filtros
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label for="historyPeriod" class="block text-sm font-medium text-gray-300 mb-2">Período</label>
+                                <label for="historyPeriod" class="block text-sm font-medium text-gray-300 mb-2">Periodo</label>
                                 <select id="historyPeriod" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
-                                    <option value="7">Última Semana</option>
-                                    <option value="30" selected>Último Mês</option>
-                                    <option value="90">Últimos 3 Meses</option>
-                                    <option value="365">Último Ano</option>
+                                    <option value="7">Ultima Semana</option>
+                                    <option value="30" selected>Ultimo Mes</option>
+                                    <option value="90">Ultimos 3 Meses</option>
+                                    <option value="365">Ultimo Ano</option>
                                     <option value="custom">Personalizado</option>
                                 </select>
                             </div>
@@ -2947,7 +2947,7 @@ function getDashboardHTML() {
                                 </select>
                             </div>
                             <div id="customDateRange" class="hidden">
-                                <label for="historyStartDate" class="block text-sm font-medium text-gray-300 mb-2">Data Início</label>
+                                <label for="historyStartDate" class="block text-sm font-medium text-gray-300 mb-2">Data Inicio</label>
                                 <input type="date" id="historyStartDate" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
                             </div>
                             <div id="customDateRangeEnd" class="hidden">
@@ -2985,43 +2985,43 @@ function getDashboardHTML() {
                         </div>
                     </div>
                     
-                    <!-- Gráficos -->
+                    <!-- Graficos -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <!-- Gráfico de Linha - Performance Diária -->
+                        <!-- Grafico de Linha - Performance Diaria -->
                         <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                             <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <span class="text-xl">📈</span>
-                                Performance Diária
+                                <span class="text-xl"></span>
+                                Performance Diaria
                             </h3>
                             <div id="dailyChart" class="h-64 flex items-center justify-center text-gray-400">
                                 <div class="text-center">
-                                    <div class="text-4xl mb-2">📊</div>
-                                    <div>Gráfico de Performance Diária</div>
-                                    <div class="text-sm">(Simulado - em produção seria Chart.js)</div>
+                                    <div class="text-4xl mb-2"></div>
+                                    <div>Grafico de Performance Diaria</div>
+                                    <div class="text-sm">(Simulado - em producao seria Chart.js)</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Gráfico de Barras - Performance por Liga -->
+                        <!-- Grafico de Barras - Performance por Liga -->
                         <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                             <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <span class="text-xl">🏆</span>
+                                <span class="text-xl"></span>
                                 Performance por Liga
                             </h3>
                             <div id="leagueChart" class="h-64 flex items-center justify-center text-gray-400">
                                 <div class="text-center">
-                                    <div class="text-4xl mb-2">📊</div>
-                                    <div>Gráfico por Liga</div>
-                                    <div class="text-sm">(Simulado - em produção seria Chart.js)</div>
+                                    <div class="text-4xl mb-2"></div>
+                                    <div>Grafico por Liga</div>
+                                    <div class="text-sm">(Simulado - em producao seria Chart.js)</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Tabela de Performance Diária -->
+                    <!-- Tabela de Performance Diaria -->
                     <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">📋</span>
+                            <span class="text-xl"></span>
                             Performance Detalhada
                         </h3>
                         <div id="historyTable" class="overflow-x-auto">
@@ -3045,42 +3045,42 @@ function getDashboardHTML() {
                     </div>
                 </div>
 
-                <!-- Painel de Notificações Inteligentes -->
+                <!-- Painel de Notificacoes Inteligentes -->
                 <div id="notificationsPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">🔔</span>
-                            Notificações Inteligentes
+                            <span class="text-2xl"></span>
+                            Notificacoes Inteligentes
                         </h2>
                         <button id="closeNotifications" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                     </div>
                     
-                    <!-- Configurações de Notificações -->
+                    <!-- Configuracoes de Notificacoes -->
                     <div class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">⚙️</span>
-                            Configurações
+                            <span class="text-xl"></span>
+                            Configuracoes
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="flex items-center space-x-3 mb-4">
                                     <input type="checkbox" id="notificationsEnabled" class="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
-                                    <span class="text-white font-medium">Ativar Notificações</span>
+                                    <span class="text-white font-medium">Ativar Notificacoes</span>
                                 </label>
                                 <label class="flex items-center space-x-3 mb-4">
                                     <input type="checkbox" id="telegramNotifications" class="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
-                                    <span class="text-white font-medium">Notificações via Telegram</span>
+                                    <span class="text-white font-medium">Notificacoes via Telegram</span>
                                 </label>
                                 <label class="flex items-center space-x-3">
                                     <input type="checkbox" id="emailNotifications" class="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
-                                    <span class="text-white font-medium">Notificações por Email</span>
+                                    <span class="text-white font-medium">Notificacoes por Email</span>
                                 </label>
                             </div>
                             <div>
-                                <label for="advanceTime" class="block text-sm font-medium text-gray-300 mb-2">Tempo de Antecipação (minutos)</label>
+                                <label for="advanceTime" class="block text-sm font-medium text-gray-300 mb-2">Tempo de Antecipacao (minutos)</label>
                                 <select id="advanceTime" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-white">
                                     <option value="15">15 minutos</option>
                                     <option value="30" selected>30 minutos</option>
@@ -3119,15 +3119,15 @@ function getDashboardHTML() {
                         
                         <div class="mt-6 flex gap-2">
                             <button id="saveNotificationSettings" class="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-2 rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 font-medium">
-                                Guardar Configurações
+                                Guardar Configuracoes
                             </button>
                             <button id="testNotification" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium">
-                                Testar Notificação
+                                Testar Notificacao
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Status das Notificações -->
+                    <!-- Status das Notificacoes -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-orange-400 mb-2" id="totalNotifications">0</div>
@@ -3139,18 +3139,18 @@ function getDashboardHTML() {
                         </div>
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-blue-400 mb-2" id="upcomingGames">0</div>
-                            <div class="text-sm text-gray-300 font-medium">Jogos Próximos</div>
+                            <div class="text-sm text-gray-300 font-medium">Jogos Proximos</div>
                         </div>
                     </div>
                     
-                    <!-- Histórico de Notificações -->
+                    <!-- Historico de Notificacoes -->
                     <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">📋</span>
-                            Histórico de Notificações
+                            <span class="text-xl"></span>
+                            Historico de Notificacoes
                         </h3>
                         <div id="notificationsHistory" class="space-y-3 max-h-64 overflow-y-auto">
-                            <div class="text-center py-8 text-gray-400">Carregando histórico...</div>
+                            <div class="text-center py-8 text-gray-400">Carregando historico...</div>
                         </div>
                     </div>
                 </div>
@@ -3159,12 +3159,12 @@ function getDashboardHTML() {
                 <div id="logsPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">📋</span>
+                            <span class="text-2xl"></span>
                             Logs e Auditoria
                             <span class="text-sm bg-red-600 text-white px-2 py-1 rounded-full">Super Admin</span>
                         </h2>
                         <button id="closeLogs" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                     </div>
@@ -3172,7 +3172,7 @@ function getDashboardHTML() {
                     <!-- Filtros de Logs -->
                     <div class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">🔍</span>
+                            <span class="text-xl"></span>
                             Filtros
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -3181,10 +3181,10 @@ function getDashboardHTML() {
                                 <select id="logEventType" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
                                     <option value="all">Todos os Eventos</option>
                                     <option value="API_FAILURE">Falhas da API</option>
-                                    <option value="SIGNAL_GENERATED">Geração de Sinais</option>
-                                    <option value="REPORT_SENT">Envio de Relatórios</option>
-                                    <option value="NOTIFICATION_SENT">Notificações</option>
-                                    <option value="USER_ACTION">Ações do Utilizador</option>
+                                    <option value="SIGNAL_GENERATED">Geracao de Sinais</option>
+                                    <option value="REPORT_SENT">Envio de Relatorios</option>
+                                    <option value="NOTIFICATION_SENT">Notificacoes</option>
+                                    <option value="USER_ACTION">Acoes do Utilizador</option>
                                     <option value="SYSTEM_EVENT">Eventos do Sistema</option>
                                 </select>
                             </div>
@@ -3214,7 +3214,7 @@ function getDashboardHTML() {
                         </div>
                     </div>
                     
-                    <!-- Estatísticas de Logs -->
+                    <!-- Estatisticas de Logs -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-red-400 mb-2" id="totalLogs">0</div>
@@ -3230,14 +3230,14 @@ function getDashboardHTML() {
                         </div>
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-blue-400 mb-2" id="last24hLogs">0</div>
-                            <div class="text-sm text-gray-300 font-medium">Últimas 24h</div>
+                            <div class="text-sm text-gray-300 font-medium">Ultimas 24h</div>
                         </div>
                     </div>
                     
                     <!-- Tabela de Logs -->
                     <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">📊</span>
+                            <span class="text-xl"></span>
                             Logs de Auditoria
                         </h3>
                         <div id="logsTable" class="overflow-x-auto">
@@ -3258,7 +3258,7 @@ function getDashboardHTML() {
                             </table>
                         </div>
                         
-                        <!-- Paginação -->
+                        <!-- Paginacao -->
                         <div id="logsPagination" class="mt-4 flex justify-between items-center">
                             <div class="text-sm text-gray-400">
                                 Mostrando <span id="logsShowing">0</span> de <span id="logsTotal">0</span> logs
@@ -3268,7 +3268,7 @@ function getDashboardHTML() {
                                     Anterior
                                 </button>
                                 <button id="nextLogs" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 disabled:opacity-50" disabled>
-                                    Próximo
+                                    Proximo
                                 </button>
                             </div>
                         </div>
@@ -3279,24 +3279,24 @@ function getDashboardHTML() {
                 <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">🎙️</span>
+                            <span class="text-2xl"></span>
                             Painel do Comentador
                         </h2>
                         <button id="clearCommentator" class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">🗑️</span>
+                            <span class="text-lg"></span>
                             Limpar
                         </button>
                     </div>
                     <div id="commentator-panel" class="bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-sm border border-gray-600">
-                        <div class="text-gray-400 text-center py-4">Sistema iniciado - Aguardando ações...</div>
+                        <div class="text-gray-400 text-center py-4">Sistema iniciado - Aguardando acoes...</div>
                     </div>
                 </div>
 
                 <!-- Stats -->
                 <div class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600">
                     <h2 class="text-xl font-bold text-white flex items-center gap-3 mb-6">
-                        <span class="text-2xl">📈</span>
-                        Estatísticas
+                        <span class="text-2xl"></span>
+                        Estatisticas
                     </h2>
                     <div id="stats-display" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500 hover:shadow-lg transition-all duration-200">
@@ -3318,15 +3318,15 @@ function getDashboardHTML() {
                     </div>
                 </div>
 
-                <!-- Configurações (Apenas para Super Admin) -->
+                <!-- Configuracoes (Apenas para Super Admin) -->
                 <div id="settingsPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">⚙️</span>
-                            Configurações do Sistema
+                            <span class="text-2xl"></span>
+                            Configuracoes do Sistema
                         </h2>
                         <button id="closeSettings" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                         </div>
@@ -3335,8 +3335,8 @@ function getDashboardHTML() {
                         <!-- API Configuration -->
                         <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                             <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <span class="text-xl">🔑</span>
-                                Configuração da API
+                                <span class="text-xl"></span>
+                                Configuracao da API
                             </h3>
                             <div class="space-y-4">
                                 <div>
@@ -3362,8 +3362,8 @@ function getDashboardHTML() {
                         <!-- Bot Configuration -->
                         <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                             <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <span class="text-xl">🤖</span>
-                                Configurações do Bot
+                                <span class="text-xl"></span>
+                                Configuracoes do Bot
                             </h3>
                             <div class="space-y-4">
                                 <div>
@@ -3371,11 +3371,11 @@ function getDashboardHTML() {
                                     <input type="number" id="signalThreshold" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="85" min="50" max="100">
                                 </div>
                                 <div>
-                                    <label for="maxSignalsPerDay" class="block text-sm font-medium text-gray-300 mb-2">Máximo de Sinais por Dia</label>
+                                    <label for="maxSignalsPerDay" class="block text-sm font-medium text-gray-300 mb-2">Maximo de Sinais por Dia</label>
                                     <input type="number" id="maxSignalsPerDay" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="50" min="1" max="200">
                                 </div>
                                 <div>
-                                    <label for="dailyReportTime" class="block text-sm font-medium text-gray-300 mb-2">Horário do Relatório Diário</label>
+                                    <label for="dailyReportTime" class="block text-sm font-medium text-gray-300 mb-2">Horario do Relatorio Diario</label>
                                     <input type="time" id="dailyReportTime" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" value="23:59">
                                 </div>
                             </div>
@@ -3384,8 +3384,8 @@ function getDashboardHTML() {
                         <!-- Telegram Configuration -->
                         <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                             <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <span class="text-xl">📱</span>
-                                Configuração do Telegram
+                                <span class="text-xl"></span>
+                                Configuracao do Telegram
                             </h3>
                             <div class="space-y-4">
                                 <div>
@@ -3398,7 +3398,7 @@ function getDashboardHTML() {
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="telegramEnabled" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
-                                    <label for="telegramEnabled" class="ml-2 text-sm text-gray-300">Ativar notificações do Telegram</label>
+                                    <label for="telegramEnabled" class="ml-2 text-sm text-gray-300">Ativar notificacoes do Telegram</label>
                                 </div>
                             </div>
                         </div>
@@ -3406,7 +3406,7 @@ function getDashboardHTML() {
                         <!-- System Status -->
                         <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                             <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <span class="text-xl">📊</span>
+                                <span class="text-xl"></span>
                                 Status do Sistema
                             </h3>
                             <div class="space-y-4">
@@ -3423,7 +3423,7 @@ function getDashboardHTML() {
                                     <span id="cronStatus" class="px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300">Executando</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-300">Última Atualização</span>
+                                    <span class="text-gray-300">Ultima Atualizacao</span>
                                     <span id="lastUpdate" class="text-gray-400 text-sm">Agora</span>
                                 </div>
                             </div>
@@ -3433,35 +3433,35 @@ function getDashboardHTML() {
                     <!-- Save Button -->
                     <div class="mt-8 flex justify-end">
                         <button id="saveSettings" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-500/25 font-medium flex items-center gap-2">
-                            <span class="text-lg">💾</span>
-                            Guardar Configurações
+                            <span class="text-lg"></span>
+                            Guardar Configuracoes
                         </button>
                     </div>
                 </div>
 
-                <!-- Página de Subscrição -->
+                <!-- Pagina de Subscricao -->
                 <div id="subscriptionPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">💳</span>
-                            Gestão de Subscrição
+                            <span class="text-2xl"></span>
+                            Gestao de Subscricao
                         </h2>
                         <button id="closeSubscription" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                     </div>
                     
-                    <!-- Status da Subscrição -->
+                    <!-- Status da Subscricao -->
                     <div id="subscriptionStatus" class="bg-gray-900 rounded-xl p-6 mb-8 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">📊</span>
+                            <span class="text-xl"></span>
                             Status Atual
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-4 rounded-lg text-center border border-gray-500">
                                 <div class="text-2xl font-bold text-blue-400 mb-2" id="currentStatus">Trial</div>
-                                <div class="text-sm text-gray-300">Status da Subscrição</div>
+                                <div class="text-sm text-gray-300">Status da Subscricao</div>
                             </div>
                             <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-4 rounded-lg text-center border border-gray-500">
                                 <div class="text-2xl font-bold text-green-400 mb-2" id="currentPlan">Trial</div>
@@ -3474,31 +3474,31 @@ function getDashboardHTML() {
                         </div>
                     </div>
                     
-                    <!-- Planos Disponíveis -->
+                    <!-- Planos Disponiveis -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                         <!-- Plano Mensal -->
                         <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-6 border border-blue-600 hover:shadow-lg transition-all duration-200">
                             <div class="text-center mb-6">
                                 <h3 class="text-2xl font-bold text-white mb-2">Plano Mensal</h3>
-                                <div class="text-4xl font-bold text-blue-300 mb-2">€29.99</div>
-                                <div class="text-gray-300">por mês</div>
+                                <div class="text-4xl font-bold text-blue-300 mb-2">EUR29.99</div>
+                                <div class="text-gray-300">por mes</div>
                             </div>
                             <ul class="space-y-3 mb-6">
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
+                                    <span class="text-green-400 mr-2"></span>
                                     Acesso completo aos sinais
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Notificações em tempo real
+                                    <span class="text-green-400 mr-2"></span>
+                                    Notificacoes em tempo real
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Relatórios diários
+                                    <span class="text-green-400 mr-2"></span>
+                                    Relatorios diarios
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Suporte prioritário
+                                    <span class="text-green-400 mr-2"></span>
+                                    Suporte prioritario
                                 </li>
                             </ul>
                             <button id="subscribeMonthly" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium">
@@ -3515,30 +3515,30 @@ function getDashboardHTML() {
                             </div>
                             <div class="text-center mb-6">
                                 <h3 class="text-2xl font-bold text-white mb-2">Plano Anual</h3>
-                                <div class="text-4xl font-bold text-purple-300 mb-2">€299.99</div>
+                                <div class="text-4xl font-bold text-purple-300 mb-2">EUR299.99</div>
                                 <div class="text-gray-300">por ano</div>
                                 <div class="text-green-400 text-sm font-medium">Poupe 17%!</div>
                             </div>
                             <ul class="space-y-3 mb-6">
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
+                                    <span class="text-green-400 mr-2"></span>
                                     Acesso completo aos sinais
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Notificações em tempo real
+                                    <span class="text-green-400 mr-2"></span>
+                                    Notificacoes em tempo real
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Relatórios diários
+                                    <span class="text-green-400 mr-2"></span>
+                                    Relatorios diarios
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Suporte prioritário
+                                    <span class="text-green-400 mr-2"></span>
+                                    Suporte prioritario
                                 </li>
                                 <li class="flex items-center text-gray-300">
-                                    <span class="text-green-400 mr-2">✅</span>
-                                    Análises exclusivas
+                                    <span class="text-green-400 mr-2"></span>
+                                    Analises exclusivas
                                 </li>
                             </ul>
                             <button id="subscribeYearly" class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium">
@@ -3547,11 +3547,11 @@ function getDashboardHTML() {
                         </div>
                     </div>
                     
-                    <!-- Histórico de Pagamentos -->
+                    <!-- Historico de Pagamentos -->
                     <div class="bg-gray-900 rounded-xl p-6 border border-gray-600">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <span class="text-xl">📋</span>
-                            Histórico de Pagamentos
+                            <span class="text-xl"></span>
+                            Historico de Pagamentos
                         </h3>
                         <div id="paymentHistory" class="space-y-3">
                             <div class="text-center text-gray-400 py-4">
@@ -3561,20 +3561,20 @@ function getDashboardHTML() {
                     </div>
                 </div>
 
-                <!-- Painel Admin de Subscrições -->
+                <!-- Painel Admin de Subscricoes -->
                 <div id="subscriptionAdminPanel" class="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg p-6 mt-8 border border-gray-600 hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">👑</span>
-                            Painel Admin - Subscrições
+                            <span class="text-2xl"></span>
+                            Painel Admin - Subscricoes
                         </h2>
                         <button id="closeSubscriptionAdmin" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg font-medium flex items-center gap-2">
-                            <span class="text-lg">✕</span>
+                            <span class="text-lg"></span>
                             Fechar
                         </button>
                     </div>
                     
-                    <!-- Estatísticas -->
+                    <!-- Estatisticas -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-blue-400 mb-2" id="totalUsers">0</div>
@@ -3582,11 +3582,11 @@ function getDashboardHTML() {
                         </div>
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-green-400 mb-2" id="activeSubscriptions">0</div>
-                            <div class="text-sm text-gray-300 font-medium">Subscrições Ativas</div>
+                            <div class="text-sm text-gray-300 font-medium">Subscricoes Ativas</div>
                         </div>
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-red-400 mb-2" id="expiredSubscriptions">0</div>
-                            <div class="text-sm text-gray-300 font-medium">Subscrições Expiradas</div>
+                            <div class="text-sm text-gray-300 font-medium">Subscricoes Expiradas</div>
                         </div>
                         <div class="bg-gradient-to-br from-gray-700 to-gray-600 p-6 rounded-xl text-center border border-gray-500">
                             <div class="text-3xl font-bold text-yellow-400 mb-2" id="trialUsers">0</div>
@@ -3605,22 +3605,22 @@ function getDashboardHTML() {
                     </div>
                 </div>
 
-                <!-- Seção de utilizadores removida - SISTEMA SEM AUTENTICAÇÃO -->
+                <!-- Secao de utilizadores removida - SISTEMA SEM AUTENTICACAO -->
             </main>
     </div>
 
     <script>
-        console.log('🔥 SCRIPT CARREGADO!');
-        // Forçar modo escuro
+        console.log(' SCRIPT CARREGADO!');
+        // Forcar modo escuro
         document.documentElement.classList.add('dark');
 
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOMContentLoaded executado!');
+            console.log(' DOMContentLoaded executado!');
             console.log('Sistema Alert@Postas iniciado - alertapostas.pt');
-            addCommentatorLog('🎯 Sistema Alert@Postas iniciado com sucesso', 'success');
+            addCommentatorLog(' Sistema Alert@Postas iniciado com sucesso', 'success');
             
             // Debug: Verificar se elementos existem
-            console.log('🔍 Verificando elementos do DOM...');
+            console.log(' Verificando elementos do DOM...');
             const elementsToCheck = [
                 'startBot', 'stopBot', 'analyzeGames', 'refreshToken',
                 'mlOverUnderToggle', 'mlWinnerToggle', 'valueBetToggle', 'nextGoalToggle',
@@ -3629,14 +3629,14 @@ function getDashboardHTML() {
             
             elementsToCheck.forEach(id => {
                 const element = document.getElementById(id);
-                console.log(id + ': ' + (element ? 'Encontrado' : 'Não encontrado'));
+                console.log(id + ': ' + (element ? 'Encontrado' : 'Nao encontrado'));
             });
             
             loadData();
             setupEventListeners();
-            updateModuleStats(); // Inicializar estatísticas dos módulos
+            updateModuleStats(); // Inicializar estatisticas dos modulos
             
-            // Inicializar calendário após um pequeno delay
+            // Inicializar calendario apos um pequeno delay
             setTimeout(() => {
                 if (document.getElementById('day-0')) {
                     initializeCalendar();
@@ -3662,12 +3662,12 @@ function getDashboardHTML() {
             }
         };
 
-        // Funções de controlo do bot
+        // Funcoes de controlo do bot
         async function startBot() {
-            console.log('🚀 startBot() chamado!');
+            console.log(' startBot() chamado!');
             try {
                 showLoading('startBot', 'Iniciando...');
-                console.log('📡 Fazendo chamada para /api/start-bot...');
+                console.log(' Fazendo chamada para /api/start-bot...');
                 const response = await fetch('/api/start-bot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -3679,13 +3679,13 @@ function getDashboardHTML() {
                     botState.isRunning = true;
                     updateBotStatus('running');
                     showToast('Bot iniciado com sucesso!', 'success');
-                    addCommentatorLog('🚀 Bot iniciado com sucesso', 'success');
+                    addCommentatorLog(' Bot iniciado com sucesso', 'success');
                 } else {
                     throw new Error(data.message || data.error || 'Falha ao iniciar bot');
                 }
             } catch (error) {
                 showToast('Erro ao iniciar bot: ' + error.message, 'error');
-                addCommentatorLog('❌ Erro ao iniciar bot: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao iniciar bot: ' + error.message, 'error');
             } finally {
                 hideLoading('startBot', 'Iniciar Bot');
             }
@@ -3705,13 +3705,13 @@ function getDashboardHTML() {
                     botState.isRunning = false;
                     updateBotStatus('stopped');
                     showToast('Bot parado com sucesso!', 'success');
-                    addCommentatorLog('⏹️ Bot parado', 'info');
+                    addCommentatorLog('[PARAR] Bot parado', 'info');
                 } else {
                     throw new Error(data.message || data.error || 'Falha ao parar bot');
                 }
             } catch (error) {
                 showToast('Erro ao parar bot: ' + error.message, 'error');
-                addCommentatorLog('❌ Erro ao parar bot: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao parar bot: ' + error.message, 'error');
             } finally {
                 hideLoading('stopBot', 'Parar Bot');
             }
@@ -3728,15 +3728,15 @@ function getDashboardHTML() {
                 const data = await response.json();
                 
                 if (response.ok && data.success && data.status === 'completed') {
-                    showToast('Análise concluída: ' + data.signals + ' sinais gerados', 'success');
-                    addCommentatorLog('🔍 Análise concluída: ' + data.signals + ' sinais', 'success');
+                    showToast('Analise concluida: ' + data.signals + ' sinais gerados', 'success');
+                    addCommentatorLog(' Analise concluida: ' + data.signals + ' sinais', 'success');
                     updateStats();
                 } else {
-                    throw new Error(data.message || data.error || 'Falha na análise');
+                    throw new Error(data.message || data.error || 'Falha na analise');
                 }
             } catch (error) {
-                showToast('Erro na análise: ' + error.message, 'error');
-                addCommentatorLog('❌ Erro na análise: ' + error.message, 'error');
+                showToast('Erro na analise: ' + error.message, 'error');
+                addCommentatorLog(' Erro na analise: ' + error.message, 'error');
             } finally {
                 hideLoading('analyzeGames', 'Analisar Jogos');
             }
@@ -3754,19 +3754,19 @@ function getDashboardHTML() {
                 
                 if (response.ok && data.status === 'ok') {
                     showToast('Token atualizado com sucesso!', 'success');
-                    addCommentatorLog('🔄 Token atualizado', 'success');
+                    addCommentatorLog(' Token atualizado', 'success');
                 } else {
                     throw new Error(data.message || 'Falha ao atualizar token');
                 }
             } catch (error) {
                 showToast('Erro ao atualizar token: ' + error.message, 'error');
-                addCommentatorLog('❌ Erro ao atualizar token: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao atualizar token: ' + error.message, 'error');
             } finally {
                 hideLoading('refreshToken', 'Atualizar Token');
             }
         }
 
-        // Função para alternar módulos
+        // Funcao para alternar modulos
         async function toggleModule(moduleName, enabled) {
             try {
                 const response = await fetch('/api/v1/bot/module', {
@@ -3782,24 +3782,24 @@ function getDashboardHTML() {
                 
                 if (response.ok && data.status === 'ok') {
                     const status = enabled ? 'ativado' : 'desativado';
-                    showToast('Módulo ' + moduleName + ' ' + status + '!', 'success');
-                    addCommentatorLog('🔧 Módulo ' + moduleName + ' ' + status, 'info');
+                    showToast('Modulo ' + moduleName + ' ' + status + '!', 'success');
+                    addCommentatorLog(' Modulo ' + moduleName + ' ' + status, 'info');
                     updateModuleStats();
                 } else {
-                    throw new Error(data.message || 'Falha ao alterar módulo');
+                    throw new Error(data.message || 'Falha ao alterar modulo');
                 }
             } catch (error) {
-                showToast('Erro ao alterar módulo: ' + error.message, 'error');
-                addCommentatorLog('❌ Erro ao alterar módulo: ' + error.message, 'error');
+                showToast('Erro ao alterar modulo: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao alterar modulo: ' + error.message, 'error');
                 // Reverter o toggle em caso de erro
                 const toggle = document.getElementById(moduleName + 'Toggle');
                 if (toggle) toggle.checked = !enabled;
             }
         }
 
-        // Função para atualizar estatísticas dos módulos
+        // Funcao para atualizar estatisticas dos modulos
         function updateModuleStats() {
-            // Simular dados dos módulos
+            // Simular dados dos modulos
             const moduleStats = {
                 over_under: { accuracy: 87, signals: 12, lastPrediction: 'Over 2.5 (85%)' },
                 winner: { accuracy: 92, signals: 8, lastPrediction: 'Casa (78%)' },
@@ -3876,17 +3876,17 @@ function getDashboardHTML() {
             const toast = document.createElement('div');
             toast.className = 'fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl text-white font-medium transform transition-all duration-300 translate-x-full flex items-center gap-3 max-w-sm';
             
-            // Ícone baseado no tipo
+            // Icone baseado no tipo
             let icon = '';
             if (type === 'success') {
                 toast.className += ' bg-gradient-to-r from-green-500 to-green-600';
-                icon = '✅';
+                icon = '';
             } else if (type === 'error') {
                 toast.className += ' bg-gradient-to-r from-red-500 to-red-600';
-                icon = '❌';
+                icon = '';
             } else {
                 toast.className += ' bg-gradient-to-r from-blue-500 to-blue-600';
-                icon = 'ℹ️';
+                icon = '[INFO]';
             }
             
             toast.innerHTML = '<span class="text-xl">' + icon + '</span>' +
@@ -3902,7 +3902,7 @@ function getDashboardHTML() {
                 toast.classList.remove('translate-x-full');
             }, 100);
             
-            // Remover após 4 segundos
+            // Remover apos 4 segundos
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.classList.add('translate-x-full');
@@ -3936,14 +3936,14 @@ function getDashboardHTML() {
                 
                 if (response.ok) {
                     const status = enabled ? 'ativado' : 'desativado';
-                    showSuccess('Módulo ' + moduleName + ' ' + status);
-                    addCommentatorLog('🧠 Módulo ' + moduleName + ' ' + status, 'info');
+                    showSuccess('Modulo ' + moduleName + ' ' + status);
+                    addCommentatorLog(' Modulo ' + moduleName + ' ' + status, 'info');
                 } else {
-                    throw new Error('Falha ao alterar módulo');
+                    throw new Error('Falha ao alterar modulo');
                 }
             } catch (error) {
-                showError('Erro ao alterar módulo: ' + error.message);
-                addCommentatorLog('❌ Erro ao alterar módulo: ' + error.message, 'error');
+                showError('Erro ao alterar modulo: ' + error.message);
+                addCommentatorLog(' Erro ao alterar modulo: ' + error.message, 'error');
             }
         }
 
@@ -3953,15 +3953,15 @@ function getDashboardHTML() {
         }
 
         function setupEventListeners() {
-            console.log('🔧 Configurando event listeners...');
+            console.log(' Configurando event listeners...');
             
-            // Botões do bot
+            // Botoes do bot
             const startBotBtn = document.getElementById('startBot');
             const stopBotBtn = document.getElementById('stopBot');
             const analyzeGamesBtn = document.getElementById('analyzeGames');
             const refreshTokenBtn = document.getElementById('refreshToken');
             
-            console.log('Botões do bot:');
+            console.log('Botoes do bot:');
             console.log('  startBot: ' + (startBotBtn ? 'OK' : 'ERRO'));
             console.log('  stopBot: ' + (stopBotBtn ? 'OK' : 'ERRO'));
             console.log('  analyzeGames: ' + (analyzeGamesBtn ? 'OK' : 'ERRO'));
@@ -3969,22 +3969,22 @@ function getDashboardHTML() {
             
             if (startBotBtn) {
                 startBotBtn.addEventListener('click', startBot);
-                console.log('✅ Event listener adicionado ao startBot');
+                console.log(' Event listener adicionado ao startBot');
             }
             if (stopBotBtn) {
                 stopBotBtn.addEventListener('click', stopBot);
-                console.log('✅ Event listener adicionado ao stopBot');
+                console.log(' Event listener adicionado ao stopBot');
             }
             if (analyzeGamesBtn) {
                 analyzeGamesBtn.addEventListener('click', analyzeGames);
-                console.log('✅ Event listener adicionado ao analyzeGames');
+                console.log(' Event listener adicionado ao analyzeGames');
             }
             if (refreshTokenBtn) {
                 refreshTokenBtn.addEventListener('click', refreshToken);
-                console.log('✅ Event listener adicionado ao refreshToken');
+                console.log(' Event listener adicionado ao refreshToken');
             }
 
-            // Módulos ML
+            // Modulos ML
             const mlOverUnderToggle = document.getElementById('mlOverUnderToggle');
             const mlWinnerToggle = document.getElementById('mlWinnerToggle');
             const valueBetToggle = document.getElementById('valueBetToggle');
@@ -3995,11 +3995,11 @@ function getDashboardHTML() {
             if (valueBetToggle) valueBetToggle.addEventListener('change', (e) => toggleModule('value_bet', e.target.checked));
             if (nextGoalToggle) nextGoalToggle.addEventListener('change', (e) => toggleModule('next_goal', e.target.checked));
             
-            // Módulo de múltiplas apostas
+            // Modulo de multiplas apostas
             const multipleBetsToggle = document.getElementById('multipleBetsToggle');
             if (multipleBetsToggle) multipleBetsToggle.addEventListener('change', (e) => toggleModule('multiple', e.target.checked));
             
-            // Botões de refresh
+            // Botoes de refresh
             const refreshGames = document.getElementById('refreshGames');
             const refreshLiveGames = document.getElementById('refreshLiveGames');
             
@@ -4015,7 +4015,7 @@ function getDashboardHTML() {
                 document.getElementById('commentator-panel').innerHTML = '<div class="text-gray-400">Logs limpos</div>';
             });
             
-            // Configurações
+            // Configuracoes
             const settingsBtn = document.getElementById('settingsBtn');
             const closeSettings = document.getElementById('closeSettings');
             const saveSettings = document.getElementById('saveSettings');
@@ -4024,7 +4024,7 @@ function getDashboardHTML() {
             if (closeSettings) closeSettings.addEventListener('click', closeSettingsPanel);
             if (saveSettings) saveSettings.addEventListener('click', saveSettingsConfig);
             
-            // Subscrições
+            // Subscricoes
             const subscriptionBtn = document.getElementById('subscriptionBtn');
             const subscriptionAdminBtn = document.getElementById('subscriptionAdminBtn');
             const closeSubscription = document.getElementById('closeSubscription');
@@ -4039,14 +4039,14 @@ function getDashboardHTML() {
             if (subscribeYearly) subscribeYearly.addEventListener('click', () => createSubscription('yearly'));
             if (closeSubscriptionAdmin) closeSubscriptionAdmin.addEventListener('click', closeSubscriptionAdminPanel);
             
-            // Explicações dos Sinais
+            // Explicacoes dos Sinais
             const createMockSignal = document.getElementById('createMockSignal');
             const closeExplanation = document.getElementById('closeExplanation');
             
             if (createMockSignal) createMockSignal.addEventListener('click', createAndShowMockSignal);
             if (closeExplanation) closeExplanation.addEventListener('click', closeExplanationPanel);
             
-            // Histórico de Performance
+            // Historico de Performance
             const historyBtn = document.getElementById('historyBtn');
             const closeHistory = document.getElementById('closeHistory');
             const applyHistoryFilters = document.getElementById('applyHistoryFilters');
@@ -4059,7 +4059,7 @@ function getDashboardHTML() {
             if (resetHistoryFilters) resetHistoryFilters.addEventListener('click', resetHistoryFilters);
             if (historyPeriod) historyPeriod.addEventListener('change', toggleCustomDateRange);
             
-            // Notificações Inteligentes
+            // Notificacoes Inteligentes
             const notificationsBtn = document.getElementById('notificationsBtn');
             const closeNotifications = document.getElementById('closeNotifications');
             const saveNotificationSettings = document.getElementById('saveNotificationSettings');
@@ -4097,14 +4097,14 @@ function getDashboardHTML() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('✅ ' + data.message);
+                    alert(' ' + data.message);
                     updateBotStatus();
                 } else {
-                    alert('❌ Erro: ' + data.error);
+                    alert(' Erro: ' + data.error);
                 }
             } catch (error) {
                 console.error('Bot action error:', error);
-                alert('❌ Erro na ação do bot: ' + error.message);
+                alert(' Erro na acao do bot: ' + error.message);
             }
         }
 
@@ -4145,17 +4145,17 @@ function getDashboardHTML() {
             try {
                 const response = await fetch('/api/v1/stats');
                 if (!response.ok) {
-                    throw new Error('Falha ao carregar estatísticas: ' + response.status);
+                    throw new Error('Falha ao carregar estatisticas: ' + response.status);
                 }
                 const data = await response.json();
                 if (data.status === 'ok') {
                     displayStats(data.stats);
                 } else {
-                    throw new Error(data.message || 'Erro ao carregar estatísticas');
+                    throw new Error(data.message || 'Erro ao carregar estatisticas');
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
-                showToast('Erro ao carregar estatísticas: ' + error.message, 'error');
+                showToast('Erro ao carregar estatisticas: ' + error.message, 'error');
             }
         }
 
@@ -4163,7 +4163,7 @@ function getDashboardHTML() {
             const container = document.getElementById('future-games-list');
             
             if (games.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-4">Sem jogos disponíveis</div>';
+                container.innerHTML = '<div class="text-center text-gray-400 py-4">Sem jogos disponiveis</div>';
                 return;
             }
 
@@ -4173,7 +4173,7 @@ function getDashboardHTML() {
                 
                 return '<div class="game-item p-3 bg-gray-700 rounded-lg">' +
                     '<div class="font-semibold text-sm">' + game.home_team + ' vs ' + game.away_team + '</div>' +
-                    '<div class="text-xs text-gray-400">' + game.league + ' - ' + gameDate + ' às ' + gameTime + '</div>' +
+                    '<div class="text-xs text-gray-400">' + game.league + ' - ' + gameDate + ' as ' + gameTime + '</div>' +
                     '</div>';
             }).join('');
 
@@ -4187,18 +4187,18 @@ function getDashboardHTML() {
             document.getElementById('pendingSignals').textContent = stats.pending;
         }
 
-        // Funções para jogos ao vivo
+        // Funcoes para jogos ao vivo
         async function loadLiveGames() {
-            console.log('🔄 loadLiveGames() iniciado');
+            console.log(' loadLiveGames() iniciado');
             try {
                 const today = new Date().toISOString().split('T')[0];
-                console.log('📅 Data de hoje:', today);
+                console.log(' Data de hoje:', today);
                 
                 const url = '/api/games?date=' + today;
-                console.log('🌐 URL da API:', url);
+                console.log(' URL da API:', url);
                 
                 const response = await fetch(url);
-                console.log('📡 Resposta da API:', response.status, response.statusText);
+                console.log(' Resposta da API:', response.status, response.statusText);
                 
                 if (!response.ok) {
                     const apiError = response.headers.get('X-API-FOOTBALL-ERROR');
@@ -4207,42 +4207,42 @@ function getDashboardHTML() {
                 }
                 
                 const games = await response.json();
-                console.log('📊 Dados recebidos:', games);
-                console.log('📊 Tipo de dados:', typeof games, 'É array?', Array.isArray(games));
+                console.log(' Dados recebidos:', games);
+                console.log(' Tipo de dados:', typeof games, 'E array?', Array.isArray(games));
                 
-                // A resposta agora é diretamente um array
+                // A resposta agora e diretamente um array
                 if (Array.isArray(games)) {
                     if (games.length === 0) {
-                        console.log('⚠️ Nenhum jogo encontrado');
+                        console.log(' Nenhum jogo encontrado');
                         displayLiveGames([]);
                         showToast('Nenhum jogo encontrado ou erro na API', 'warning');
                     } else {
-                        console.log('✅ Jogos encontrados:', games.length);
+                        console.log(' Jogos encontrados:', games.length);
                         displayLiveGames(games);
                         showToast(games.length + ' jogos carregados com sucesso', 'success');
                     }
                 } else {
-                    console.error('❌ Resposta inválida:', games);
-                    throw new Error('Resposta inválida da API');
+                    console.error(' Resposta invalida:', games);
+                    throw new Error('Resposta invalida da API');
                 }
             } catch (error) {
-                console.error('❌ Error loading live games:', error);
+                console.error(' Error loading live games:', error);
                 displayLiveGames([]);
                 showToast('Erro ao carregar jogos: ' + error.message, 'error');
             }
         }
 
         function displayLiveGames(games) {
-            console.log('🎮 displayLiveGames() chamado com:', games);
+            console.log(' displayLiveGames() chamado com:', games);
             const container = document.getElementById('live-games-list');
-            console.log('🎮 Container encontrado:', container);
+            console.log(' Container encontrado:', container);
             
             if (!games || games.length === 0) {
-                console.log('⚠️ Nenhum jogo para exibir');
+                console.log(' Nenhum jogo para exibir');
                 container.innerHTML = '<div class="text-center text-gray-400 py-8">' +
-                    '<div class="text-4xl mb-2">⚽</div>' +
+                    '<div class="text-4xl mb-2"></div>' +
                     '<p class="text-lg font-medium">Nenhum jogo encontrado ou erro na API</p>' +
-                    '<p class="text-sm">Verifique a conexão ou tente novamente</p>' +
+                    '<p class="text-sm">Verifique a conexao ou tente novamente</p>' +
                     '</div>';
                 return;
             }
@@ -4252,7 +4252,7 @@ function getDashboardHTML() {
                 let statusColor = 'bg-gray-600';
                 let statusText = game.estado;
                 
-                if (game.estado === 'Ao Vivo' || game.estado === '1º Tempo' || game.estado === '2º Tempo') {
+                if (game.estado === 'Ao Vivo' || game.estado === '1o Tempo' || game.estado === '2o Tempo') {
                     statusColor = 'bg-red-600';
                 } else if (game.estado === 'Terminado') {
                     statusColor = 'bg-green-600';
@@ -4278,7 +4278,7 @@ function getDashboardHTML() {
             container.innerHTML = gamesHtml;
         }
 
-        // Funções para comentador
+        // Funcoes para comentador
         async function loadCommentatorLogs() {
             try {
                 const response = await fetch('/api/v1/commentator');
@@ -4293,7 +4293,7 @@ function getDashboardHTML() {
             const container = document.getElementById('commentator-panel');
             
             if (logs.length === 0) {
-                container.innerHTML = '<div class="text-gray-400">Sistema iniciado - Aguardando ações...</div>';
+                container.innerHTML = '<div class="text-gray-400">Sistema iniciado - Aguardando acoes...</div>';
                 return;
             }
 
@@ -4310,7 +4310,7 @@ function getDashboardHTML() {
             container.scrollTop = container.scrollHeight;
         }
 
-        // Função de pesquisa
+        // Funcao de pesquisa
         function filterGames() {
             const searchInput = document.getElementById('gameSearch');
             if (!searchInput) return;
@@ -4331,7 +4331,7 @@ function getDashboardHTML() {
             });
         }
 
-        // Função para adicionar logs ao comentador (frontend)
+        // Funcao para adicionar logs ao comentador (frontend)
         async function addCommentatorLog(message, type = 'info') {
             try {
                 await fetch('/api/v1/commentator', {
@@ -4346,9 +4346,9 @@ function getDashboardHTML() {
             }
         }
 
-        // Funções de utilizadores removidas - SISTEMA SEM AUTENTICAÇÃO
+        // Funcoes de utilizadores removidas - SISTEMA SEM AUTENTICACAO
 
-        // Funções de Subscrições
+        // Funcoes de Subscricoes
         async function handleCreateSubscriptionSession(request, env) {
             const CORS_HEADERS = {
                 'Access-Control-Allow-Origin': '*',
@@ -4360,22 +4360,22 @@ function getDashboardHTML() {
                 const body = await request.json();
                 const { userId, planType = 'monthly' } = body;
                 
-                console.log('Criando sessão de pagamento para utilizador:', userId, 'plano:', planType);
-                addCommentatorLog('💳 Criando sessão de pagamento para utilizador: ' + userId, 'info');
+                console.log('Criando sessao de pagamento para utilizador:', userId, 'plano:', planType);
+                addCommentatorLog(' Criando sessao de pagamento para utilizador: ' + userId, 'info');
                 
-                // Mock do Stripe - em produção seria uma chamada real
+                // Mock do Stripe - em producao seria uma chamada real
                 const mockSession = {
                     id: 'cs_mock_' + Date.now(),
                     url: 'https://checkout.stripe.com/mock-session',
                     customer: userId,
                     plan: planType,
-                    amount: planType === 'monthly' ? 2999 : 29999, // €29.99 ou €299.99
+                    amount: planType === 'monthly' ? 2999 : 29999, // EUR29.99 ou EUR299.99
                     currency: 'eur',
                     status: 'open',
                     created_at: new Date().toISOString()
                 };
                 
-                // Guardar sessão no storage
+                // Guardar sessao no storage
                 storage.subscriptions.push({
                     sessionId: mockSession.id,
                     userId: userId,
@@ -4384,7 +4384,7 @@ function getDashboardHTML() {
                     createdAt: new Date().toISOString()
                 });
                 
-                addCommentatorLog('✅ Sessão de pagamento criada: ' + mockSession.id, 'success');
+                addCommentatorLog(' Sessao de pagamento criada: ' + mockSession.id, 'success');
                 
                 return new Response(JSON.stringify(mockSession), {
                     status: 200,
@@ -4392,8 +4392,8 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao criar sessão de pagamento:', error);
-                addCommentatorLog('❌ Erro ao criar sessão de pagamento: ' + error.message, 'error');
+                console.error('Erro ao criar sessao de pagamento:', error);
+                addCommentatorLog(' Erro ao criar sessao de pagamento: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4413,14 +4413,14 @@ function getDashboardHTML() {
                 const { type, data } = body;
                 
                 console.log('Webhook Stripe recebido:', type);
-                addCommentatorLog('🔔 Webhook Stripe recebido: ' + type, 'info');
+                addCommentatorLog(' Webhook Stripe recebido: ' + type, 'info');
                 
                 if (type === 'checkout.session.completed') {
                     const session = data.object;
                     const subscription = storage.subscriptions.find(sub => sub.sessionId === session.id);
                     
                     if (subscription) {
-                        // Atualizar status da subscrição
+                        // Atualizar status da subscricao
                         subscription.status = 'active';
                         subscription.paymentId = session.payment_intent;
                         subscription.updatedAt = new Date().toISOString();
@@ -4443,7 +4443,7 @@ function getDashboardHTML() {
                             user.subscription_start = new Date().toISOString();
                         }
                         
-                        addCommentatorLog('✅ Subscrição ativada para utilizador: ' + subscription.userId, 'success');
+                        addCommentatorLog(' Subscricao ativada para utilizador: ' + subscription.userId, 'success');
                     }
                 }
                 
@@ -4454,7 +4454,7 @@ function getDashboardHTML() {
                 
             } catch (error) {
                 console.error('Erro no webhook:', error);
-                addCommentatorLog('❌ Erro no webhook: ' + error.message, 'error');
+                addCommentatorLog(' Erro no webhook: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4502,7 +4502,7 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao obter status da subscrição:', error);
+                console.error('Erro ao obter status da subscricao:', error);
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4518,7 +4518,7 @@ function getDashboardHTML() {
             };
             
             try {
-                // Em produção, verificar se o utilizador é super_admin
+                // Em producao, verificar se o utilizador e super_admin
                 const adminData = {
                     totalUsers: storage.users.length,
                     activeSubscriptions: storage.users.filter(u => u.subscription_status === 'active').length,
@@ -4541,7 +4541,7 @@ function getDashboardHTML() {
                     }))
                 };
                 
-                addCommentatorLog('👑 Painel admin de subscrições acessado', 'info');
+                addCommentatorLog(' Painel admin de subscricoes acessado', 'info');
                 
                 return new Response(JSON.stringify(adminData), {
                     status: 200,
@@ -4557,13 +4557,13 @@ function getDashboardHTML() {
             }
         }
 
-        // Funções de Subscrições
+        // Funcoes de Subscricoes
         function openSubscription() {
             const subscriptionPanel = document.getElementById('subscriptionPanel');
             if (subscriptionPanel) {
                 subscriptionPanel.classList.remove('hidden');
                 loadSubscriptionStatus();
-                addCommentatorLog('💳 Painel de Subscrição aberto', 'info');
+                addCommentatorLog(' Painel de Subscricao aberto', 'info');
             }
         }
 
@@ -4571,7 +4571,7 @@ function getDashboardHTML() {
             const subscriptionPanel = document.getElementById('subscriptionPanel');
             if (subscriptionPanel) {
                 subscriptionPanel.classList.add('hidden');
-                addCommentatorLog('💳 Painel de Subscrição fechado', 'info');
+                addCommentatorLog(' Painel de Subscricao fechado', 'info');
             }
         }
 
@@ -4580,7 +4580,7 @@ function getDashboardHTML() {
             if (adminPanel) {
                 adminPanel.classList.remove('hidden');
                 loadSubscriptionAdmin();
-                addCommentatorLog('👑 Painel Admin de Subscrições aberto', 'info');
+                addCommentatorLog(' Painel Admin de Subscricoes aberto', 'info');
             }
         }
 
@@ -4588,7 +4588,7 @@ function getDashboardHTML() {
             const adminPanel = document.getElementById('subscriptionAdminPanel');
             if (adminPanel) {
                 adminPanel.classList.add('hidden');
-                addCommentatorLog('👑 Painel Admin de Subscrições fechado', 'info');
+                addCommentatorLog(' Painel Admin de Subscricoes fechado', 'info');
             }
         }
 
@@ -4604,17 +4604,17 @@ function getDashboardHTML() {
                 const daysLeft = status.isTrial ? 7 : 30;
                 document.getElementById('daysLeft').textContent = daysLeft;
                 
-                addCommentatorLog('📊 Status da subscrição carregado: ' + status.status, 'info');
+                addCommentatorLog(' Status da subscricao carregado: ' + status.status, 'info');
                 
             } catch (error) {
-                console.error('Erro ao carregar status da subscrição:', error);
-                addCommentatorLog('❌ Erro ao carregar status da subscrição: ' + error.message, 'error');
+                console.error('Erro ao carregar status da subscricao:', error);
+                addCommentatorLog(' Erro ao carregar status da subscricao: ' + error.message, 'error');
             }
         }
 
         async function createSubscription(planType) {
             try {
-                addCommentatorLog('💳 Iniciando processo de subscrição: ' + planType, 'info');
+                addCommentatorLog(' Iniciando processo de subscricao: ' + planType, 'info');
                 
                 const response = await fetch('/api/v1/subscription/create-session', {
                     method: 'POST',
@@ -4630,36 +4630,36 @@ function getDashboardHTML() {
                 const session = await response.json();
                 
                 if (session.url) {
-                    addCommentatorLog('✅ Sessão de pagamento criada: ' + session.id, 'success');
-                    alert('✅ Redirecionando para o pagamento...\n\nEm modo de teste, a subscrição será ativada automaticamente.');
+                    addCommentatorLog(' Sessao de pagamento criada: ' + session.id, 'success');
+                    alert(' Redirecionando para o pagamento...\n\nEm modo de teste, a subscricao sera ativada automaticamente.');
                     
-                    // Simular ativação da subscrição (em produção seria via webhook)
+                    // Simular ativacao da subscricao (em producao seria via webhook)
                     setTimeout(() => {
                         simulateSubscriptionActivation(planType);
                     }, 2000);
                 } else {
-                    throw new Error('Erro ao criar sessão de pagamento');
+                    throw new Error('Erro ao criar sessao de pagamento');
                 }
                 
             } catch (error) {
-                console.error('Erro ao criar subscrição:', error);
-                addCommentatorLog('❌ Erro ao criar subscrição: ' + error.message, 'error');
-                alert('❌ Erro ao criar subscrição: ' + error.message);
+                console.error('Erro ao criar subscricao:', error);
+                addCommentatorLog(' Erro ao criar subscricao: ' + error.message, 'error');
+                alert(' Erro ao criar subscricao: ' + error.message);
             }
         }
 
         function simulateSubscriptionActivation(planType) {
-            // Simular ativação da subscrição
-            addCommentatorLog('🎉 Subscrição ativada com sucesso: ' + planType, 'success');
-            addCommentatorLog('✅ Acesso completo aos sinais disponível', 'success');
+            // Simular ativacao da subscricao
+            addCommentatorLog(' Subscricao ativada com sucesso: ' + planType, 'success');
+            addCommentatorLog(' Acesso completo aos sinais disponivel', 'success');
             
             // Atualizar interface
             document.getElementById('currentStatus').textContent = 'Active';
             document.getElementById('currentPlan').textContent = planType;
-            document.getElementById('daysLeft').textContent = '∞';
+            document.getElementById('daysLeft').textContent = 'INFINITO';
             
             // Mostrar alerta de sucesso
-            alert('🎉 Subscrição ativada com sucesso!\n\nAgora tem acesso completo a todos os sinais e funcionalidades.');
+            alert(' Subscricao ativada com sucesso!\n\nAgora tem acesso completo a todos os sinais e funcionalidades.');
         }
 
         async function loadSubscriptionAdmin() {
@@ -4667,7 +4667,7 @@ function getDashboardHTML() {
                 const response = await fetch('/api/v1/subscription/admin');
                 const adminData = await response.json();
                 
-                // Atualizar estatísticas
+                // Atualizar estatisticas
                 document.getElementById('totalUsers').textContent = adminData.totalUsers;
                 document.getElementById('activeSubscriptions').textContent = adminData.activeSubscriptions;
                 document.getElementById('expiredSubscriptions').textContent = adminData.expiredSubscriptions;
@@ -4697,15 +4697,15 @@ function getDashboardHTML() {
                     usersList.innerHTML = '<div class="text-center text-gray-400 py-4">Nenhum utilizador encontrado</div>';
                 }
                 
-                addCommentatorLog('👑 Dados admin de subscrições carregados', 'info');
+                addCommentatorLog(' Dados admin de subscricoes carregados', 'info');
                 
             } catch (error) {
                 console.error('Erro ao carregar dados admin:', error);
-                addCommentatorLog('❌ Erro ao carregar dados admin: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao carregar dados admin: ' + error.message, 'error');
             }
         }
 
-        // Funções de Notificações Inteligentes
+        // Funcoes de Notificacoes Inteligentes
         async function handleNotificationConfig(request, env) {
             const CORS_HEADERS = {
                 'Access-Control-Allow-Origin': '*',
@@ -4715,17 +4715,17 @@ function getDashboardHTML() {
             
             try {
                 if (request.method === 'GET') {
-                    // Retornar configurações atuais
+                    // Retornar configuracoes atuais
                     return new Response(JSON.stringify(storage.notificationSettings), {
                         status: 200,
                         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
                     });
                 } else if (request.method === 'POST') {
-                    // Atualizar configurações
+                    // Atualizar configuracoes
                     const newSettings = await request.json();
                     storage.notificationSettings = { ...storage.notificationSettings, ...newSettings };
                     
-                    addCommentatorLog('🔔 Configurações de notificações atualizadas', 'success');
+                    addCommentatorLog(' Configuracoes de notificacoes atualizadas', 'success');
                     
                     return new Response(JSON.stringify({ success: true, settings: storage.notificationSettings }), {
                         status: 200,
@@ -4736,8 +4736,8 @@ function getDashboardHTML() {
                 return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
                 
             } catch (error) {
-                console.error('Erro ao gerir configurações de notificações:', error);
-                addCommentatorLog('❌ Erro ao gerir notificações: ' + error.message, 'error');
+                console.error('Erro ao gerir configuracoes de notificacoes:', error);
+                addCommentatorLog(' Erro ao gerir notificacoes: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4755,21 +4755,21 @@ function getDashboardHTML() {
             try {
                 const { gameId, message, type = 'upcoming' } = await request.json();
                 
-                console.log('Enviando notificação:', { gameId, type, message });
-                addCommentatorLog('🔔 Enviando notificação: ' + type, 'info');
+                console.log('Enviando notificacao:', { gameId, type, message });
+                addCommentatorLog(' Enviando notificacao: ' + type, 'info');
                 
                 let sent = false;
                 
                 if (storage.notificationSettings.telegramEnabled) {
-                    const telegramMessage = '🔔 <b>NOTIFICAÇÃO DE JOGO</b>\n\n' +
-                                          '⚽ <b>Jogo:</b> ' + message + '\n' +
-                                          '⏰ <b>Tipo:</b> ' + (type === 'upcoming' ? 'Próximo Jogo' : 'Lembrete') + '\n' +
-                                          '📅 <b>Enviado:</b> ' + new Date().toLocaleString('pt-PT');
+                    const telegramMessage = ' <b>NOTIFICACAO DE JOGO</b>\n\n' +
+                                          ' <b>Jogo:</b> ' + message + '\n' +
+                                          '[TEMPO] <b>Tipo:</b> ' + (type === 'upcoming' ? 'Proximo Jogo' : 'Lembrete') + '\n' +
+                                          ' <b>Enviado:</b> ' + new Date().toLocaleString('pt-PT');
                     
                     sent = await sendTelegramMessage(env, telegramMessage);
                 }
                 
-                // Guardar notificação no histórico
+                // Guardar notificacao no historico
                 const notification = {
                     id: Date.now().toString(),
                     gameId: gameId,
@@ -4782,12 +4782,12 @@ function getDashboardHTML() {
                 
                 storage.notifications.push(notification);
                 
-                // Manter apenas as últimas 100 notificações
+                // Manter apenas as ultimas 100 notificacoes
                 if (storage.notifications.length > 100) {
                     storage.notifications = storage.notifications.slice(-100);
                 }
                 
-                addCommentatorLog(sent ? '✅ Notificação enviada com sucesso' : '❌ Falha ao enviar notificação', sent ? 'success' : 'error');
+                addCommentatorLog(sent ? ' Notificacao enviada com sucesso' : ' Falha ao enviar notificacao', sent ? 'success' : 'error');
                 
                 return new Response(JSON.stringify({ 
                     success: sent, 
@@ -4798,8 +4798,8 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao enviar notificação:', error);
-                addCommentatorLog('❌ Erro ao enviar notificação: ' + error.message, 'error');
+                console.error('Erro ao enviar notificacao:', error);
+                addCommentatorLog(' Erro ao enviar notificacao: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4818,19 +4818,19 @@ function getDashboardHTML() {
                 const url = new URL(request.url);
                 const minutes = parseInt(url.searchParams.get('minutes') || '30');
                 
-                console.log('Verificando jogos próximos em', minutes, 'minutos');
-                addCommentatorLog('🔍 Verificando jogos próximos em ' + minutes + ' minutos', 'info');
+                console.log('Verificando jogos proximos em', minutes, 'minutos');
+                addCommentatorLog(' Verificando jogos proximos em ' + minutes + ' minutos', 'info');
                 
                 const now = new Date();
                 const targetTime = new Date(now.getTime() + (minutes * 60 * 1000));
                 
-                // Buscar jogos que começam no período especificado
+                // Buscar jogos que comecam no periodo especificado
                 const upcomingGames = storage.futureGames.filter(game => {
                     const gameTime = new Date(game.date);
                     const timeDiff = gameTime.getTime() - now.getTime();
                     const minutesDiff = timeDiff / (1000 * 60);
                     
-                    // Jogo está entre agora e o tempo alvo (com margem de 5 minutos)
+                    // Jogo esta entre agora e o tempo alvo (com margem de 5 minutos)
                     return minutesDiff >= 0 && minutesDiff <= (minutes + 5) && 
                            storage.notificationSettings.leagues.includes(game.league);
                 });
@@ -4838,11 +4838,11 @@ function getDashboardHTML() {
                 const notifications = [];
                 
                 for (const game of upcomingGames) {
-                    // Verificar se já foi notificado
+                    // Verificar se ja foi notificado
                     const alreadyNotified = storage.notifications.some(notif => 
                         notif.gameId === game.id && 
                         notif.type === 'upcoming' &&
-                        new Date(notif.timestamp) > new Date(now.getTime() - 60 * 60 * 1000) // última hora
+                        new Date(notif.timestamp) > new Date(now.getTime() - 60 * 60 * 1000) // ultima hora
                     );
                     
                     if (!alreadyNotified) {
@@ -4865,7 +4865,7 @@ function getDashboardHTML() {
                     }
                 }
                 
-                addCommentatorLog('🔔 Verificação concluída: ' + notifications.length + ' notificações enviadas', 'success');
+                addCommentatorLog(' Verificacao concluida: ' + notifications.length + ' notificacoes enviadas', 'success');
                 
                 return new Response(JSON.stringify({
                     success: true,
@@ -4878,8 +4878,8 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao verificar jogos próximos:', error);
-                addCommentatorLog('❌ Erro ao verificar jogos próximos: ' + error.message, 'error');
+                console.error('Erro ao verificar jogos proximos:', error);
+                addCommentatorLog(' Erro ao verificar jogos proximos: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4887,7 +4887,7 @@ function getDashboardHTML() {
             }
         }
 
-        // Funções de Logs e Auditoria
+        // Funcoes de Logs e Auditoria
         async function handleAuditLogs(request, env) {
             const CORS_HEADERS = {
                 'Access-Control-Allow-Origin': '*',
@@ -4896,7 +4896,7 @@ function getDashboardHTML() {
             };
             
             try {
-                // Verificar se é super_admin (simulado - em produção seria JWT)
+                // Verificar se e super_admin (simulado - em producao seria JWT)
                 const url = new URL(request.url);
                 const userRole = url.searchParams.get('role') || 'user';
                 
@@ -4912,7 +4912,7 @@ function getDashboardHTML() {
                 const offset = parseInt(url.searchParams.get('offset') || '0');
                 
                 console.log('Consultando logs de auditoria:', { tipoEvento, limit, offset });
-                addCommentatorLog('📋 Consultando logs de auditoria', 'info');
+                addCommentatorLog(' Consultando logs de auditoria', 'info');
                 
                 // Filtrar logs por tipo de evento
                 let filteredLogs = storage.auditLogs;
@@ -4923,7 +4923,7 @@ function getDashboardHTML() {
                 // Ordenar por timestamp (mais recentes primeiro)
                 filteredLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
-                // Paginação
+                // Paginacao
                 const paginatedLogs = filteredLogs.slice(offset, offset + limit);
                 
                 const response = {
@@ -4939,7 +4939,7 @@ function getDashboardHTML() {
                     }
                 };
                 
-                addCommentatorLog('📊 Logs de auditoria consultados: ' + paginatedLogs.length + ' de ' + filteredLogs.length, 'success');
+                addCommentatorLog(' Logs de auditoria consultados: ' + paginatedLogs.length + ' de ' + filteredLogs.length, 'success');
                 
                 return new Response(JSON.stringify(response), {
                     status: 200,
@@ -4948,7 +4948,7 @@ function getDashboardHTML() {
                 
             } catch (error) {
                 console.error('Erro ao consultar logs de auditoria:', error);
-                addCommentatorLog('❌ Erro ao consultar logs: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao consultar logs: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -4964,21 +4964,21 @@ function getDashboardHTML() {
             };
             
             try {
-                // Verificar se é super_admin (simulado - em produção seria JWT)
+                // Verificar se e super_admin (simulado - em producao seria JWT)
                 const url = new URL(request.url);
                 const userRole = url.searchParams.get('role') || 'user';
                 
                 if (userRole !== 'super_admin') {
-                    return new Response(JSON.stringify({ error: 'Acesso negado. Apenas super_admin pode consultar estatísticas de logs.' }), {
+                    return new Response(JSON.stringify({ error: 'Acesso negado. Apenas super_admin pode consultar estatisticas de logs.' }), {
                         status: 403,
                         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
                     });
                 }
                 
-                console.log('Consultando estatísticas de logs');
-                addCommentatorLog('📊 Consultando estatísticas de logs', 'info');
+                console.log('Consultando estatisticas de logs');
+                addCommentatorLog(' Consultando estatisticas de logs', 'info');
                 
-                // Estatísticas por tipo de evento
+                // Estatisticas por tipo de evento
                 const statsByType = {};
                 storage.auditLogs.forEach(log => {
                     if (!statsByType[log.tipo_evento]) {
@@ -4987,7 +4987,7 @@ function getDashboardHTML() {
                     statsByType[log.tipo_evento]++;
                 });
                 
-                // Estatísticas por utilizador
+                // Estatisticas por utilizador
                 const statsByUser = {};
                 storage.auditLogs.forEach(log => {
                     if (!statsByUser[log.utilizador]) {
@@ -4996,7 +4996,7 @@ function getDashboardHTML() {
                     statsByUser[log.utilizador]++;
                 });
                 
-                // Estatísticas por hora (últimas 24h)
+                // Estatisticas por hora (ultimas 24h)
                 const now = new Date();
                 const last24h = storage.auditLogs.filter(log => {
                     const logTime = new Date(log.timestamp);
@@ -5029,7 +5029,7 @@ function getDashboardHTML() {
                     })).sort((a, b) => a.hour - b.hour)
                 };
                 
-                addCommentatorLog('📈 Estatísticas de logs calculadas: ' + stats.total + ' logs totais', 'success');
+                addCommentatorLog(' Estatisticas de logs calculadas: ' + stats.total + ' logs totais', 'success');
                 
                 return new Response(JSON.stringify(stats), {
                     status: 200,
@@ -5037,8 +5037,8 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao consultar estatísticas de logs:', error);
-                addCommentatorLog('❌ Erro ao consultar estatísticas: ' + error.message, 'error');
+                console.error('Erro ao consultar estatisticas de logs:', error);
+                addCommentatorLog(' Erro ao consultar estatisticas: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -5046,7 +5046,7 @@ function getDashboardHTML() {
             }
         }
 
-        // Funções de Histórico de Performance
+        // Funcoes de Historico de Performance
         async function handleHistoryPerformance(request, env) {
             const CORS_HEADERS = {
                 'Access-Control-Allow-Origin': '*',
@@ -5061,8 +5061,8 @@ function getDashboardHTML() {
                 const startDate = url.searchParams.get('startDate');
                 const endDate = url.searchParams.get('endDate');
                 
-                console.log('Buscando histórico de performance:', { league, period, startDate, endDate });
-                addCommentatorLog('📊 Buscando histórico de performance', 'info');
+                console.log('Buscando historico de performance:', { league, period, startDate, endDate });
+                addCommentatorLog(' Buscando historico de performance', 'info');
                 
                 // Calcular datas
                 let start, end;
@@ -5075,7 +5075,7 @@ function getDashboardHTML() {
                     start.setDate(start.getDate() - parseInt(period));
                 }
                 
-                // Filtrar sinais por período e liga
+                // Filtrar sinais por periodo e liga
                 const filteredSignals = storage.signals.filter(signal => {
                     const signalDate = new Date(signal.date);
                     const dateMatch = signalDate >= start && signalDate <= end;
@@ -5083,7 +5083,7 @@ function getDashboardHTML() {
                     return dateMatch && leagueMatch && signal.status !== 'pending';
                 });
                 
-                // Calcular estatísticas
+                // Calcular estatisticas
                 const totalSignals = filteredSignals.length;
                 const greenSignals = filteredSignals.filter(s => s.status === 'green').length;
                 const redSignals = filteredSignals.filter(s => s.status === 'red').length;
@@ -5093,7 +5093,7 @@ function getDashboardHTML() {
                 const avgOdds = 2.0; // Simulado
                 const yield = totalSignals > 0 ? (((greenSignals * (avgOdds - 1)) - redSignals) / totalSignals * 100).toFixed(2) : 0;
                 
-                // Estatísticas por dia
+                // Estatisticas por dia
                 const dailyStats = {};
                 filteredSignals.forEach(signal => {
                     const date = new Date(signal.date).toISOString().split('T')[0];
@@ -5105,7 +5105,7 @@ function getDashboardHTML() {
                     if (signal.status === 'red') dailyStats[date].red++;
                 });
                 
-                // Estatísticas por liga
+                // Estatisticas por liga
                 const leagueStats = {};
                 filteredSignals.forEach(signal => {
                     if (!leagueStats[signal.league]) {
@@ -5150,7 +5150,7 @@ function getDashboardHTML() {
                     }))
                 };
                 
-                addCommentatorLog('📈 Histórico de performance calculado: ' + totalSignals + ' sinais, ' + winRate + '% acerto', 'success');
+                addCommentatorLog(' Historico de performance calculado: ' + totalSignals + ' sinais, ' + winRate + '% acerto', 'success');
                 
                 return new Response(JSON.stringify(performance), {
                     status: 200,
@@ -5158,8 +5158,8 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao buscar histórico de performance:', error);
-                addCommentatorLog('❌ Erro ao buscar histórico: ' + error.message, 'error');
+                console.error('Erro ao buscar historico de performance:', error);
+                addCommentatorLog(' Erro ao buscar historico: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -5178,20 +5178,20 @@ function getDashboardHTML() {
                 const url = new URL(request.url);
                 const type = url.searchParams.get('type') || 'overview'; // overview, trends, leagues
                 
-                console.log('Buscando estatísticas de histórico:', type);
-                addCommentatorLog('📊 Buscando estatísticas de histórico: ' + type, 'info');
+                console.log('Buscando estatisticas de historico:', type);
+                addCommentatorLog(' Buscando estatisticas de historico: ' + type, 'info');
                 
                 let stats = {};
                 
                 if (type === 'overview') {
-                    // Estatísticas gerais
+                    // Estatisticas gerais
                     const allSignals = storage.signals.filter(s => s.status !== 'pending');
                     const totalSignals = allSignals.length;
                     const greenSignals = allSignals.filter(s => s.status === 'green').length;
                     const redSignals = allSignals.filter(s => s.status === 'red').length;
                     const winRate = totalSignals > 0 ? ((greenSignals / totalSignals) * 100).toFixed(2) : 0;
                     
-                    // Sinais por mês (últimos 12 meses)
+                    // Sinais por mes (ultimos 12 meses)
                     const monthlyStats = {};
                     allSignals.forEach(signal => {
                         const date = new Date(signal.date);
@@ -5218,7 +5218,7 @@ function getDashboardHTML() {
                         })).sort((a, b) => a.month.localeCompare(b.month))
                     };
                 } else if (type === 'trends') {
-                    // Tendências semanais
+                    // Tendencias semanais
                     const weeklyStats = {};
                     const allSignals = storage.signals.filter(s => s.status !== 'pending');
                     
@@ -5243,7 +5243,7 @@ function getDashboardHTML() {
                         })).sort((a, b) => a.week.localeCompare(b.week))
                     };
                 } else if (type === 'leagues') {
-                    // Estatísticas por liga
+                    // Estatisticas por liga
                     const leagueStats = {};
                     const allSignals = storage.signals.filter(s => s.status !== 'pending');
                     
@@ -5267,7 +5267,7 @@ function getDashboardHTML() {
                     };
                 }
                 
-                addCommentatorLog('📈 Estatísticas de histórico calculadas: ' + type, 'success');
+                addCommentatorLog(' Estatisticas de historico calculadas: ' + type, 'success');
                 
                 return new Response(JSON.stringify(stats), {
                     status: 200,
@@ -5275,8 +5275,8 @@ function getDashboardHTML() {
                 });
                 
             } catch (error) {
-                console.error('Erro ao buscar estatísticas de histórico:', error);
-                addCommentatorLog('❌ Erro ao buscar estatísticas: ' + error.message, 'error');
+                console.error('Erro ao buscar estatisticas de historico:', error);
+                addCommentatorLog(' Erro ao buscar estatisticas: ' + error.message, 'error');
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -5298,22 +5298,22 @@ function getDashboardHTML() {
             return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         }
 
-        // Funções de Explicações dos Sinais
+        // Funcoes de Explicacoes dos Sinais
         function createAndShowMockSignal() {
             try {
                 const signal = createMockSignalWithExplanation();
                 displaySignalsList();
                 showSignalExplanation(signal);
-                addCommentatorLog('🧠 Sinal criado e explicação exibida', 'success');
+                addCommentatorLog(' Sinal criado e explicacao exibida', 'success');
             } catch (error) {
                 console.error('Erro ao criar sinal:', error);
-                addCommentatorLog('❌ Erro ao criar sinal: ' + error.message, 'error');
+                addCommentatorLog(' Erro ao criar sinal: ' + error.message, 'error');
             }
         }
 
         function showSignalExplanation(signal) {
             if (!signal.explanation) {
-                alert('❌ Este sinal não possui explicação');
+                alert(' Este sinal nao possui explicacao');
                 return;
             }
 
@@ -5323,71 +5323,71 @@ function getDashboardHTML() {
             if (explanationPanel && explanationContent) {
                 const explanation = signal.explanation;
                 
-                // Criar HTML da explicação usando concatenação de strings
+                // Criar HTML da explicacao usando concatenacao de strings
                 let html = '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600">' +
                           '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
-                          '<span class="text-xl">🎯</span>Informações do Sinal</h3>' +
+                          '<span class="text-xl"></span>Informacoes do Sinal</h3>' +
                           '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
                           '<div><div class="text-gray-300 text-sm">Jogo</div>' +
                           '<div class="text-white font-medium">' + signal.home_team + ' vs ' + signal.away_team + '</div></div>' +
                           '<div><div class="text-gray-300 text-sm">Liga</div>' +
                           '<div class="text-white font-medium">' + signal.league + '</div></div>' +
-                          '<div><div class="text-gray-300 text-sm">Previsão</div>' +
+                          '<div><div class="text-gray-300 text-sm">Previsao</div>' +
                           '<div class="text-white font-medium">' + signal.prediction + '</div></div>' +
-                          '<div><div class="text-gray-300 text-sm">Confiança</div>' +
+                          '<div><div class="text-gray-300 text-sm">Confianca</div>' +
                           '<div class="text-green-400 font-bold">' + signal.confidence + '%</div></div>' +
                           '</div></div>';
 
-                // Estatísticas das equipas
+                // Estatisticas das equipas
                 html += '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600 mt-6">' +
                        '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
-                       '<span class="text-xl">📊</span>Estatísticas das Equipas</h3>' +
+                       '<span class="text-xl"></span>Estatisticas das Equipas</h3>' +
                        '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
                        '<div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 border border-blue-600 border-opacity-30">' +
-                       '<h4 class="font-bold text-blue-300 mb-3">🏠 ' + explanation.teamStats.homeTeam.name + '</h4>' +
+                       '<h4 class="font-bold text-blue-300 mb-3"> ' + explanation.teamStats.homeTeam.name + '</h4>' +
                        '<div class="space-y-2 text-sm">' +
                        '<div class="flex justify-between"><span class="text-gray-300">Golos marcados:</span>' +
                        '<span class="text-white font-medium">' + explanation.teamStats.homeTeam.avgGoalsScored + '/jogo</span></div>' +
-                       '<div class="flex justify-between"><span class="text-gray-300">Taxa vitórias casa:</span>' +
+                       '<div class="flex justify-between"><span class="text-gray-300">Taxa vitorias casa:</span>' +
                        '<span class="text-green-400 font-bold">' + explanation.teamStats.homeTeam.homeWinRate + '%</span></div>' +
                        '</div></div>' +
                        '<div class="bg-red-900 bg-opacity-30 rounded-lg p-4 border border-red-600 border-opacity-30">' +
-                       '<h4 class="font-bold text-red-300 mb-3">✈️ ' + explanation.teamStats.awayTeam.name + '</h4>' +
+                       '<h4 class="font-bold text-red-300 mb-3"> ' + explanation.teamStats.awayTeam.name + '</h4>' +
                        '<div class="space-y-2 text-sm">' +
                        '<div class="flex justify-between"><span class="text-gray-300">Golos marcados:</span>' +
                        '<span class="text-white font-medium">' + explanation.teamStats.awayTeam.avgGoalsScored + '/jogo</span></div>' +
-                       '<div class="flex justify-between"><span class="text-gray-300">Taxa vitórias fora:</span>' +
+                       '<div class="flex justify-between"><span class="text-gray-300">Taxa vitorias fora:</span>' +
                        '<span class="text-yellow-400 font-bold">' + explanation.teamStats.awayTeam.awayWinRate + '%</span></div>' +
                        '</div></div></div></div>';
 
                 // Confrontos diretos
                 html += '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600 mt-6">' +
                        '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
-                       '<span class="text-xl">⚔️</span>Confrontos Diretos</h3>' +
+                       '<span class="text-xl"></span>Confrontos Diretos</h3>' +
                        '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">' +
                        '<div class="bg-gray-700 rounded-lg p-3">' +
                        '<div class="text-2xl font-bold text-blue-400">' + explanation.headToHead.totalMeetings + '</div>' +
                        '<div class="text-xs text-gray-400">Total Jogos</div></div>' +
                        '<div class="bg-gray-700 rounded-lg p-3">' +
                        '<div class="text-2xl font-bold text-green-400">' + explanation.headToHead.homeWins + '</div>' +
-                       '<div class="text-xs text-gray-400">Vitórias Casa</div></div>' +
+                       '<div class="text-xs text-gray-400">Vitorias Casa</div></div>' +
                        '<div class="bg-gray-700 rounded-lg p-3">' +
                        '<div class="text-2xl font-bold text-yellow-400">' + explanation.headToHead.draws + '</div>' +
                        '<div class="text-xs text-gray-400">Empates</div></div>' +
                        '<div class="bg-gray-700 rounded-lg p-3">' +
                        '<div class="text-2xl font-bold text-red-400">' + explanation.headToHead.awayWins + '</div>' +
-                       '<div class="text-xs text-gray-400">Vitórias Fora</div></div>' +
+                       '<div class="text-xs text-gray-400">Vitorias Fora</div></div>' +
                        '</div></div>';
 
-                // Razões da análise
+                // Razoes da analise
                 html += '<div class="bg-gray-900 rounded-xl p-6 border border-gray-600 mt-6">' +
                        '<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">' +
-                       '<span class="text-xl">💡</span>Razões da Análise</h3>' +
+                       '<span class="text-xl"></span>Razoes da Analise</h3>' +
                        '<div class="space-y-3">';
                 
                 explanation.reasoning.forEach(reason => {
                     html += '<div class="flex items-start gap-3 bg-gray-700 rounded-lg p-3">' +
-                           '<div class="text-green-400 mt-1">•</div>' +
+                           '<div class="text-green-400 mt-1">-</div>' +
                            '<div class="text-gray-200">' + reason + '</div></div>';
                 });
                 
@@ -5395,7 +5395,7 @@ function getDashboardHTML() {
                 
                 explanationContent.innerHTML = html;
                 explanationPanel.classList.remove('hidden');
-                addCommentatorLog('🧠 Explicação do sinal exibida', 'info');
+                addCommentatorLog(' Explicacao do sinal exibida', 'info');
             }
         }
 
@@ -5403,7 +5403,7 @@ function getDashboardHTML() {
             const explanationPanel = document.getElementById('signalExplanations');
             if (explanationPanel) {
                 explanationPanel.classList.add('hidden');
-                addCommentatorLog('🧠 Painel de explicação fechado', 'info');
+                addCommentatorLog(' Painel de explicacao fechado', 'info');
             }
         }
 
@@ -5414,13 +5414,13 @@ function getDashboardHTML() {
                 storage.signals.forEach(signal => {
                     const statusColor = signal.status === 'green' ? 'text-green-400' : 
                                        signal.status === 'red' ? 'text-red-400' : 'text-yellow-400';
-                    const hasExplanation = signal.explanation ? '🧠' : '';
+                    const hasExplanation = signal.explanation ? '' : '';
                     
                     html += '<div class="bg-gray-700 rounded-lg p-3 mb-2 border border-gray-600">' +
                            '<div class="flex justify-between items-center">' +
                            '<div>' +
                            '<div class="font-medium text-white">' + signal.home_team + ' vs ' + signal.away_team + '</div>' +
-                           '<div class="text-sm text-gray-400">' + signal.league + ' • ' + signal.prediction + '</div>' +
+                           '<div class="text-sm text-gray-400">' + signal.league + ' - ' + signal.prediction + '</div>' +
                            '</div>' +
                            '<div class="text-right">' +
                            '<div class="flex items-center gap-2">' +
@@ -5430,7 +5430,7 @@ function getDashboardHTML() {
                            '</div>';
                     
                     if (signal.explanation) {
-                        html += '<button onclick="showSignalExplanation(storage.signals.find(s => s.id === \'' + signal.id + '\'))" class="text-xs text-blue-400 hover:text-blue-300 mt-1">Ver Explicação</button>';
+                        html += '<button onclick="showSignalExplanation(storage.signals.find(s => s.id === \'' + signal.id + '\'))" class="text-xs text-blue-400 hover:text-blue-300 mt-1">Ver Explicacao</button>';
                     }
                     
                     html += '</div></div></div>';
@@ -5439,13 +5439,13 @@ function getDashboardHTML() {
             }
         }
 
-        // Funções de Histórico de Performance
+        // Funcoes de Historico de Performance
         function openHistoryPanel() {
             const historyPanel = document.getElementById('historyPanel');
             if (historyPanel) {
                 historyPanel.classList.remove('hidden');
                 loadHistoryData();
-                addCommentatorLog('📊 Painel de Histórico aberto', 'info');
+                addCommentatorLog(' Painel de Historico aberto', 'info');
             }
         }
 
@@ -5453,7 +5453,7 @@ function getDashboardHTML() {
             const historyPanel = document.getElementById('historyPanel');
             if (historyPanel) {
                 historyPanel.classList.add('hidden');
-                addCommentatorLog('📊 Painel de Histórico fechado', 'info');
+                addCommentatorLog(' Painel de Historico fechado', 'info');
             }
         }
 
@@ -5477,7 +5477,7 @@ function getDashboardHTML() {
             document.getElementById('customDateRange').classList.add('hidden');
             document.getElementById('customDateRangeEnd').classList.add('hidden');
             loadHistoryData();
-            addCommentatorLog('📊 Filtros de histórico resetados', 'info');
+            addCommentatorLog(' Filtros de historico resetados', 'info');
         }
 
         async function loadHistoryData() {
@@ -5497,7 +5497,7 @@ function getDashboardHTML() {
                     url += '&league=' + encodeURIComponent(league);
                 }
                 
-                addCommentatorLog('📊 Carregando dados de histórico...', 'info');
+                addCommentatorLog(' Carregando dados de historico...', 'info');
                 
                 const response = await fetch(url);
                     const data = await response.json();
@@ -5512,18 +5512,18 @@ function getDashboardHTML() {
                     // Atualizar tabela
                     updateHistoryTable(data.dailyStats);
                     
-                    // Atualizar gráficos (simulado)
+                    // Atualizar graficos (simulado)
                     updateHistoryCharts(data);
                     
-                    addCommentatorLog('📈 Dados de histórico carregados: ' + data.summary.totalSignals + ' sinais, ' + data.summary.winRate + '% acerto', 'success');
+                    addCommentatorLog(' Dados de historico carregados: ' + data.summary.totalSignals + ' sinais, ' + data.summary.winRate + '% acerto', 'success');
                 } else {
-                    throw new Error('Dados de histórico inválidos');
+                    throw new Error('Dados de historico invalidos');
                 }
                 
             } catch (error) {
-                console.error('Erro ao carregar dados de histórico:', error);
-                addCommentatorLog('❌ Erro ao carregar histórico: ' + error.message, 'error');
-                alert('❌ Erro ao carregar dados de histórico: ' + error.message);
+                console.error('Erro ao carregar dados de historico:', error);
+                addCommentatorLog(' Erro ao carregar historico: ' + error.message, 'error');
+                alert(' Erro ao carregar dados de historico: ' + error.message);
             }
         }
 
@@ -5531,7 +5531,7 @@ function getDashboardHTML() {
             const tableBody = document.getElementById('historyTableBody');
             if (tableBody && dailyStats) {
                 if (dailyStats.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Nenhum dado encontrado para o período selecionado</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Nenhum dado encontrado para o periodo selecionado</td></tr>';
                     return;
                 }
                 
@@ -5553,22 +5553,22 @@ function getDashboardHTML() {
         }
 
         function updateHistoryCharts(data) {
-            // Simular gráficos (em produção seria Chart.js)
+            // Simular graficos (em producao seria Chart.js)
             const dailyChart = document.getElementById('dailyChart');
             const leagueChart = document.getElementById('leagueChart');
             
             if (dailyChart) {
                 dailyChart.innerHTML = '<div class="text-center text-gray-400">' +
-                                     '<div class="text-4xl mb-2">📈</div>' +
-                                     '<div>Performance Diária</div>' +
+                                     '<div class="text-4xl mb-2"></div>' +
+                                     '<div>Performance Diaria</div>' +
                                      '<div class="text-sm mt-2">' + data.dailyStats.length + ' dias de dados</div>' +
-                                     '<div class="text-xs text-gray-500">Média: ' + data.summary.winRate + '% acerto</div>' +
+                                     '<div class="text-xs text-gray-500">Media: ' + data.summary.winRate + '% acerto</div>' +
                                      '</div>';
             }
             
             if (leagueChart) {
                 leagueChart.innerHTML = '<div class="text-center text-gray-400">' +
-                                      '<div class="text-4xl mb-2">🏆</div>' +
+                                      '<div class="text-4xl mb-2"></div>' +
                                       '<div>Performance por Liga</div>' +
                                       '<div class="text-sm mt-2">' + data.leagueStats.length + ' ligas</div>' +
                                       '<div class="text-xs text-gray-500">Filtro: ' + (data.filters.league === 'all' ? 'Todas' : data.filters.league) + '</div>' +
@@ -5585,14 +5585,14 @@ function getDashboardHTML() {
             });
         }
 
-        // Funções de Notificações Inteligentes
+        // Funcoes de Notificacoes Inteligentes
         function openNotificationsPanel() {
             const notificationsPanel = document.getElementById('notificationsPanel');
             if (notificationsPanel) {
                 notificationsPanel.classList.remove('hidden');
                 loadNotificationSettings();
                 loadNotificationStats();
-                addCommentatorLog('🔔 Painel de Notificações aberto', 'info');
+                addCommentatorLog(' Painel de Notificacoes aberto', 'info');
             }
         }
 
@@ -5600,12 +5600,12 @@ function getDashboardHTML() {
             const notificationsPanel = document.getElementById('notificationsPanel');
             if (notificationsPanel) {
                 notificationsPanel.classList.add('hidden');
-                addCommentatorLog('🔔 Painel de Notificações fechado', 'info');
+                addCommentatorLog(' Painel de Notificacoes fechado', 'info');
             }
         }
 
         function loadNotificationSettings() {
-            // Carregar configurações atuais
+            // Carregar configuracoes atuais
             document.getElementById('notificationsEnabled').checked = storage.notificationSettings.enabled;
             document.getElementById('telegramNotifications').checked = storage.notificationSettings.telegramEnabled;
             document.getElementById('emailNotifications').checked = storage.notificationSettings.emailEnabled;
@@ -5645,22 +5645,22 @@ function getDashboardHTML() {
                 });
                 
                 if (response.ok) {
-                    addCommentatorLog('✅ Configurações de notificações guardadas', 'success');
+                    addCommentatorLog(' Configuracoes de notificacoes guardadas', 'success');
                     loadNotificationStats();
                 } else {
-                    throw new Error('Falha ao guardar configurações');
+                    throw new Error('Falha ao guardar configuracoes');
                 }
                 
             } catch (error) {
-                console.error('Erro ao guardar configurações:', error);
-                addCommentatorLog('❌ Erro ao guardar configurações: ' + error.message, 'error');
-                alert('❌ Erro ao guardar configurações: ' + error.message);
+                console.error('Erro ao guardar configuracoes:', error);
+                addCommentatorLog(' Erro ao guardar configuracoes: ' + error.message, 'error');
+                alert(' Erro ao guardar configuracoes: ' + error.message);
             }
         }
 
         async function testNotificationSend() {
             try {
-                const testMessage = 'Teste de Notificação - ' + new Date().toLocaleString('pt-PT');
+                const testMessage = 'Teste de Notificacao - ' + new Date().toLocaleString('pt-PT');
                 
                 const response = await fetch('/api/v1/notifications/send', {
                     method: 'POST',
@@ -5673,38 +5673,38 @@ function getDashboardHTML() {
                 });
                 
                 if (response.ok) {
-                    addCommentatorLog('✅ Notificação de teste enviada', 'success');
+                    addCommentatorLog(' Notificacao de teste enviada', 'success');
                     loadNotificationStats();
                 } else {
-                    throw new Error('Falha ao enviar notificação de teste');
+                    throw new Error('Falha ao enviar notificacao de teste');
                 }
                 
             } catch (error) {
-                console.error('Erro ao enviar notificação de teste:', error);
-                addCommentatorLog('❌ Erro ao enviar teste: ' + error.message, 'error');
-                alert('❌ Erro ao enviar notificação de teste: ' + error.message);
+                console.error('Erro ao enviar notificacao de teste:', error);
+                addCommentatorLog(' Erro ao enviar teste: ' + error.message, 'error');
+                alert(' Erro ao enviar notificacao de teste: ' + error.message);
             }
         }
 
         function loadNotificationStats() {
-            // Atualizar estatísticas
+            // Atualizar estatisticas
             const totalNotifications = storage.notifications.length;
             const successNotifications = storage.notifications.filter(n => n.sent).length;
             
-            // Contar jogos próximos
+            // Contar jogos proximos
             const now = new Date();
             const upcomingGames = storage.futureGames.filter(game => {
                 const gameTime = new Date(game.date);
                 const timeDiff = gameTime.getTime() - now.getTime();
                 const minutesDiff = timeDiff / (1000 * 60);
-                return minutesDiff >= 0 && minutesDiff <= 60; // próximos 60 minutos
+                return minutesDiff >= 0 && minutesDiff <= 60; // proximos 60 minutos
             }).length;
             
             document.getElementById('totalNotifications').textContent = totalNotifications;
             document.getElementById('successNotifications').textContent = successNotifications;
             document.getElementById('upcomingGames').textContent = upcomingGames;
             
-            // Atualizar histórico
+            // Atualizar historico
             updateNotificationHistory();
         }
 
@@ -5712,24 +5712,24 @@ function getDashboardHTML() {
             const historyContainer = document.getElementById('notificationsHistory');
             if (!historyContainer) return;
             
-            const recentNotifications = storage.notifications.slice(-10).reverse(); // últimas 10
+            const recentNotifications = storage.notifications.slice(-10).reverse(); // ultimas 10
             
             if (recentNotifications.length === 0) {
-                historyContainer.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhuma notificação enviada ainda</div>';
+                historyContainer.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhuma notificacao enviada ainda</div>';
                 return;
             }
             
             let html = '';
             recentNotifications.forEach(notification => {
                 const statusColor = notification.sent ? 'text-green-400' : 'text-red-400';
-                const statusIcon = notification.sent ? '✅' : '❌';
+                const statusIcon = notification.sent ? '' : '';
                 const timeAgo = getTimeAgo(new Date(notification.timestamp));
                 
                 html += '<div class="bg-gray-800 rounded-lg p-4 border border-gray-600">' +
                        '<div class="flex justify-between items-start">' +
                        '<div class="flex-1">' +
                        '<div class="text-white font-medium">' + notification.message + '</div>' +
-                       '<div class="text-sm text-gray-400 mt-1">' + notification.type + ' • ' + timeAgo + '</div>' +
+                       '<div class="text-sm text-gray-400 mt-1">' + notification.type + ' - ' + timeAgo + '</div>' +
                        '</div>' +
                        '<div class="flex items-center gap-2">' +
                        '<span class="' + statusColor + '">' + statusIcon + '</span>' +
@@ -5746,13 +5746,13 @@ function getDashboardHTML() {
             const now = new Date();
             const diffInSeconds = Math.floor((now - date) / 1000);
             
-            if (diffInSeconds < 60) return 'há ' + diffInSeconds + 's';
-            if (diffInSeconds < 3600) return 'há ' + Math.floor(diffInSeconds / 60) + 'm';
-            if (diffInSeconds < 86400) return 'há ' + Math.floor(diffInSeconds / 3600) + 'h';
-            return 'há ' + Math.floor(diffInSeconds / 86400) + 'd';
+            if (diffInSeconds < 60) return 'ha ' + diffInSeconds + 's';
+            if (diffInSeconds < 3600) return 'ha ' + Math.floor(diffInSeconds / 60) + 'm';
+            if (diffInSeconds < 86400) return 'ha ' + Math.floor(diffInSeconds / 3600) + 'h';
+            return 'ha ' + Math.floor(diffInSeconds / 86400) + 'd';
         }
 
-        // Funções de Logs e Auditoria
+        // Funcoes de Logs e Auditoria
         let currentLogsOffset = 0;
         let currentLogsLimit = 100;
         let currentLogsData = null;
@@ -5762,7 +5762,7 @@ function getDashboardHTML() {
             if (logsPanel) {
                 logsPanel.classList.remove('hidden');
                 loadLogsData();
-                addCommentatorLog('📋 Painel de Logs aberto', 'info');
+                addCommentatorLog(' Painel de Logs aberto', 'info');
             }
         }
 
@@ -5770,7 +5770,7 @@ function getDashboardHTML() {
             const logsPanel = document.getElementById('logsPanel');
             if (logsPanel) {
                 logsPanel.classList.add('hidden');
-                addCommentatorLog('📋 Painel de Logs fechado', 'info');
+                addCommentatorLog(' Painel de Logs fechado', 'info');
             }
         }
 
@@ -5788,7 +5788,7 @@ function getDashboardHTML() {
                     url += '&tipo_evento=' + eventType;
                 }
                 
-                addCommentatorLog('📋 Carregando logs de auditoria...', 'info');
+                addCommentatorLog(' Carregando logs de auditoria...', 'info');
                 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -5798,15 +5798,15 @@ function getDashboardHTML() {
                     updateLogsTable(data.logs);
                     updateLogsPagination(data.pagination);
                     loadLogsStats();
-                    addCommentatorLog('📊 Logs carregados: ' + data.logs.length + ' de ' + data.pagination.total, 'success');
+                    addCommentatorLog(' Logs carregados: ' + data.logs.length + ' de ' + data.pagination.total, 'success');
                 } else {
-                    throw new Error('Dados de logs inválidos');
+                    throw new Error('Dados de logs invalidos');
                 }
                 
             } catch (error) {
                 console.error('Erro ao carregar logs:', error);
-                addCommentatorLog('❌ Erro ao carregar logs: ' + error.message, 'error');
-                alert('❌ Erro ao carregar logs: ' + error.message);
+                addCommentatorLog(' Erro ao carregar logs: ' + error.message, 'error');
+                alert(' Erro ao carregar logs: ' + error.message);
             }
         }
 
@@ -5840,8 +5840,8 @@ function getDashboardHTML() {
                 }
                 
             } catch (error) {
-                console.error('Erro ao carregar página de logs:', error);
-                addCommentatorLog('❌ Erro ao carregar página: ' + error.message, 'error');
+                console.error('Erro ao carregar pagina de logs:', error);
+                addCommentatorLog(' Erro ao carregar pagina: ' + error.message, 'error');
             }
         }
 
@@ -5902,7 +5902,7 @@ function getDashboardHTML() {
                 }
                 
             } catch (error) {
-                console.error('Erro ao carregar estatísticas de logs:', error);
+                console.error('Erro ao carregar estatisticas de logs:', error);
             }
         }
 
@@ -5928,13 +5928,13 @@ function getDashboardHTML() {
             return colors[utilizador] || 'bg-gray-700 text-gray-300';
         }
 
-        // Funções de Configurações
+        // Funcoes de Configuracoes
         function openSettings() {
             const settingsPanel = document.getElementById('settingsPanel');
             if (settingsPanel) {
                 settingsPanel.classList.remove('hidden');
                 loadCurrentSettings();
-                addCommentatorLog('⚙️ Painel de Configurações aberto', 'info');
+                addCommentatorLog(' Painel de Configuracoes aberto', 'info');
             }
         }
 
@@ -5942,19 +5942,19 @@ function getDashboardHTML() {
             const settingsPanel = document.getElementById('settingsPanel');
             if (settingsPanel) {
                 settingsPanel.classList.add('hidden');
-                addCommentatorLog('⚙️ Painel de Configurações fechado', 'info');
+                addCommentatorLog(' Painel de Configuracoes fechado', 'info');
             }
         }
 
         function loadCurrentSettings() {
-            // Carregar configurações atuais (simulado - em produção viria da API)
-            document.getElementById('apiKey').value = '••••••••••••••••';
+            // Carregar configuracoes atuais (simulado - em producao viria da API)
+            document.getElementById('apiKey').value = '----------------';
             document.getElementById('apiLimit').value = '100';
             document.getElementById('timezone').value = 'Europe/Lisbon';
             document.getElementById('signalThreshold').value = '85';
             document.getElementById('maxSignalsPerDay').value = '50';
             document.getElementById('dailyReportTime').value = '23:59';
-            document.getElementById('telegramToken').value = '••••••••••••••••';
+            document.getElementById('telegramToken').value = '----------------';
             document.getElementById('telegramGroupId').value = '-1002937302746';
             document.getElementById('telegramEnabled').checked = true;
             
@@ -5981,37 +5981,37 @@ function getDashboardHTML() {
                     telegramEnabled: document.getElementById('telegramEnabled').checked
                 };
 
-                // Validar configurações
+                // Validar configuracoes
                 if (settings.apiLimit < 1 || settings.apiLimit > 1000) {
-                    alert('❌ Limite de chamadas deve estar entre 1 e 1000');
+                    alert(' Limite de chamadas deve estar entre 1 e 1000');
                     return;
                 }
 
                 if (settings.signalThreshold < 50 || settings.signalThreshold > 100) {
-                    alert('❌ Threshold de sinais deve estar entre 50% e 100%');
+                    alert(' Threshold de sinais deve estar entre 50% e 100%');
                     return;
                 }
 
                 if (settings.maxSignalsPerDay < 1 || settings.maxSignalsPerDay > 200) {
-                    alert('❌ Máximo de sinais por dia deve estar entre 1 e 200');
+                    alert(' Maximo de sinais por dia deve estar entre 1 e 200');
                     return;
                 }
 
-                // Simular salvamento (em produção seria uma chamada à API)
-                addCommentatorLog('💾 Configurações validadas e guardadas com sucesso', 'success');
-                addCommentatorLog('🔧 Threshold: ' + settings.signalThreshold + '% | Max Sinais: ' + settings.maxSignalsPerDay + ' | Relatório: ' + settings.dailyReportTime, 'info');
+                // Simular salvamento (em producao seria uma chamada a API)
+                addCommentatorLog(' Configuracoes validadas e guardadas com sucesso', 'success');
+                addCommentatorLog(' Threshold: ' + settings.signalThreshold + '% | Max Sinais: ' + settings.maxSignalsPerDay + ' | Relatorio: ' + settings.dailyReportTime, 'info');
                 
-                alert('✅ Configurações guardadas com sucesso!');
+                alert(' Configuracoes guardadas com sucesso!');
                 closeSettingsPanel();
 
             } catch (error) {
-                console.error('Erro ao guardar configurações:', error);
-                addCommentatorLog('❌ Erro ao guardar configurações: ' + error.message, 'error');
-                alert('❌ Erro ao guardar configurações: ' + error.message);
+                console.error('Erro ao guardar configuracoes:', error);
+                addCommentatorLog(' Erro ao guardar configuracoes: ' + error.message, 'error');
+                alert(' Erro ao guardar configuracoes: ' + error.message);
             }
         }
 
-        // Event listener para botão de limpar sinais
+        // Event listener para botao de limpar sinais
         document.getElementById('clearSignals').addEventListener('click', () => {
             document.getElementById('signals-list').innerHTML = '<div class="text-gray-400">Nenhum sinal enviado</div>';
         });
@@ -6019,7 +6019,7 @@ function getDashboardHTML() {
         // Atualizar comentador a cada 5 segundos
         setInterval(loadCommentatorLogs, 5000);
 
-        // ===== CALENDÁRIO HORIZONTAL =====
+        // ===== CALENDARIO HORIZONTAL =====
         let currentWeek = new Date();
         let selectedDate = new Date().toISOString().split('T')[0];
         let allGames = [];
@@ -6033,7 +6033,7 @@ function getDashboardHTML() {
         }
 
         function setupCalendarEventListeners() {
-            // Botões de navegação
+            // Botoes de navegacao
             document.getElementById('prevWeek').addEventListener('click', () => {
                 currentWeek.setDate(currentWeek.getDate() - 7);
                 updateCalendarDisplay();
@@ -6081,7 +6081,7 @@ function getDashboardHTML() {
                 showAllGames();
             });
 
-            // Botões de seleção
+            // Botoes de selecao
             document.getElementById('selectAllGames').addEventListener('click', () => {
                 selectAllVisibleGames();
             });
@@ -6108,7 +6108,7 @@ function getDashboardHTML() {
                 // Resetar estilos
                 dayElement.className = 'h-16 flex flex-col items-center justify-center p-2 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors';
                 
-                // Verificar se é hoje
+                // Verificar se e hoje
                 const today = new Date();
                 if (day.toDateString() === today.toDateString()) {
                     dayElement.className = 'h-16 flex flex-col items-center justify-center p-2 border-2 border-red-500 rounded-lg cursor-pointer bg-red-900/20';
@@ -6118,13 +6118,13 @@ function getDashboardHTML() {
                     dateElement.className = 'text-lg font-bold text-red-400';
                 } else {
                     const weekdaySpan = dayElement.querySelector('span:first-child');
-                    const weekdays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+                    const weekdays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
                     weekdaySpan.textContent = weekdays[day.getDay() === 0 ? 6 : day.getDay() - 1];
                     weekdaySpan.className = 'text-xs font-medium text-gray-400';
                     dateElement.className = 'text-lg font-bold';
                 }
                 
-                // Verificar se é o dia selecionado
+                // Verificar se e o dia selecionado
                 const dayString = day.toISOString().split('T')[0];
                 if (dayString === selectedDate) {
                     dayElement.className += ' bg-blue-900/30 border-blue-500';
@@ -6152,8 +6152,8 @@ function getDashboardHTML() {
         }
 
         function updateSelectedDayTitle(date) {
-            const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-            const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            const weekdays = ['Domingo', 'Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado'];
+            const months = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             
             const weekday = weekdays[date.getDay()];
             const day = date.getDate();
@@ -6191,7 +6191,7 @@ function getDashboardHTML() {
                     });
                 }
                 
-                // Se não há jogos futuros, tentar buscar jogos ao vivo
+                // Se nao ha jogos futuros, tentar buscar jogos ao vivo
                 if (games.length === 0) {
                     response = await fetch('/api/v1/live-games');
                     
@@ -6226,7 +6226,7 @@ function getDashboardHTML() {
                 console.error('Erro ao carregar jogos:', error);
                 gamesLoading.classList.add('hidden');
                 gamesError.classList.remove('hidden');
-                document.getElementById('gamesErrorText').textContent = '❌ Erro ao carregar jogos: ' + error.message;
+                document.getElementById('gamesErrorText').textContent = ' Erro ao carregar jogos: ' + error.message;
             }
         }
 
@@ -6260,7 +6260,7 @@ function getDashboardHTML() {
                     statusText = 'FUTURO';
                 }
                 
-                // Checkbox para seleção
+                // Checkbox para selecao
                 const isSelected = selectedGames.has(game.id);
                 const checkboxClass = isSelected ? 'checked' : '';
                 
@@ -6275,7 +6275,7 @@ function getDashboardHTML() {
                             '<span class="' + statusBadge + ' text-white px-2 py-1 rounded text-xs whitespace-nowrap">' + statusText + '</span>' +
                         '</div>' +
                         '<div class="text-xs text-gray-400 truncate">' +
-                            game.league + ' • ' + game.country +
+                            game.league + ' - ' + game.country +
                         '</div>' +
                     '</div>' +
                     '<div class="text-right flex-shrink-0">' +
@@ -6381,7 +6381,7 @@ function getDashboardHTML() {
             document.getElementById('deselectAllGames').classList.add('hidden');
         }
 
-        // Inicializar calendário quando a página carregar (já está no DOMContentLoaded principal)
+        // Inicializar calendario quando a pagina carregar (ja esta no DOMContentLoaded principal)
         setTimeout(() => {
             if (document.getElementById('day-0')) {
                 initializeCalendar();
