@@ -86,6 +86,7 @@ export default {
     // Rotas principais - SEM AUTENTICACAO
     if (path === '/' || path === '/dashboard') {
       return new Response(getDashboardHTML(), {
+        status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...CORS_HEADERS }
       });
     }
