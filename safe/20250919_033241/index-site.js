@@ -496,37 +496,21 @@ async function handleBotStart(request, env) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
   
-  const timestamp = new Date().toISOString();
-  
   try {
-    // Log estruturado
-    console.log(`[${timestamp}] BOT_START: Iniciando bot via API`);
-    
     // Simular início do bot
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.log(`[${timestamp}] BOT_START_SUCCESS: Bot iniciado com sucesso`);
-    addAuditLog('BOT_START', 'Bot iniciado via API', 'system');
-    
     return new Response(JSON.stringify({
-      success: true,
-      status: "running",
-      message: "Bot iniciado com sucesso",
-      timestamp
+      status: "ok",
+      message: "Bot iniciado com sucesso"
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
   } catch (error) {
-    const errorMsg = `Erro ao iniciar bot: ${error.message}`;
-    console.error(`[${timestamp}] BOT_START_ERROR: ${errorMsg}`);
-    addAuditLog('BOT_START_ERROR', errorMsg, 'system');
-    
     return new Response(JSON.stringify({
-      success: false,
       status: "error",
-      error: errorMsg,
-      timestamp
+      error: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -541,37 +525,21 @@ async function handleBotStop(request, env) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
   
-  const timestamp = new Date().toISOString();
-  
   try {
-    // Log estruturado
-    console.log(`[${timestamp}] BOT_STOP: Parando bot via API`);
-    
     // Simular paragem do bot
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    console.log(`[${timestamp}] BOT_STOP_SUCCESS: Bot parado com sucesso`);
-    addAuditLog('BOT_STOP', 'Bot parado via API', 'system');
-    
     return new Response(JSON.stringify({
-      success: true,
-      status: "stopped",
-      message: "Bot parado com sucesso",
-      timestamp
+      status: "ok",
+      message: "Bot parado com sucesso"
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
   } catch (error) {
-    const errorMsg = `Erro ao parar bot: ${error.message}`;
-    console.error(`[${timestamp}] BOT_STOP_ERROR: ${errorMsg}`);
-    addAuditLog('BOT_STOP_ERROR', errorMsg, 'system');
-    
     return new Response(JSON.stringify({
-      success: false,
       status: "error",
-      error: errorMsg,
-      timestamp
+      error: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -863,24 +831,9 @@ async function handleUnifiedGamesAPI(request, env) {
       console.error(`[${timestamp}] ERROR: ${errorMsg}`);
       addAuditLog('API_ERROR', errorMsg, 'system');
       
-      // Log estruturado para API-Football
-      const logEntry = {
-        timestamp,
-        endpoint: '/api/games',
-        method: 'GET',
-        params: { date: targetDate },
-        error: 'MISSING_API_KEY',
-        message: errorMsg
-      };
-      console.log('API_FOOTBALL_LOG:', JSON.stringify(logEntry));
-      
       return new Response(JSON.stringify([]), {
-        status: 503,
-        headers: { 
-          'Content-Type': 'application/json', 
-          'X-API-FOOTBALL-ERROR': errorMsg,
-          ...CORS_HEADERS 
-        }
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
       });
     }
 
@@ -916,21 +869,8 @@ async function handleUnifiedGamesAPI(request, env) {
           }
         });
 
-        // Log estruturado da chamada à API-Football
-        const apiLogEntry = {
-          timestamp,
-          endpoint: 'v3.football.api-sports.io/fixtures',
-          method: 'GET',
-          params: { date: targetDate, status },
-          httpStatus: response.status,
-          httpStatusText: response.statusText
-        };
-
         if (response.ok) {
           const data = await response.json();
-          apiLogEntry.results = data.results || 0;
-          apiLogEntry.success = true;
-          console.log('API_FOOTBALL_LOG:', JSON.stringify(apiLogEntry));
           
           if (data.response && data.response.length > 0) {
             console.log(`[${timestamp}] API_SUCCESS: ${data.response.length} jogos encontrados com status ${status}`);
@@ -958,11 +898,6 @@ async function handleUnifiedGamesAPI(request, env) {
           console.error(`[${timestamp}] API_ERROR: ${errorMsg}`);
           addAuditLog('API_ERROR', `${errorMsg} | URL: ${apiUrl} | Status: ${status}`, 'system');
           
-          // Log estruturado do erro
-          apiLogEntry.success = false;
-          apiLogEntry.error = errorMsg;
-          console.log('API_FOOTBALL_LOG:', JSON.stringify(apiLogEntry));
-          
           // Se for erro de quota ou key inválida, parar as chamadas
           if (response.status === 429 || response.status === 401 || response.status === 403) {
             console.error(`[${timestamp}] API_QUOTA_ERROR: Parando chamadas devido a erro de quota/key`);
@@ -977,17 +912,6 @@ async function handleUnifiedGamesAPI(request, env) {
         const errorMsg = `Erro de rede: ${error.message}`;
         console.error(`[${timestamp}] NETWORK_ERROR: ${errorMsg}`);
         addAuditLog('NETWORK_ERROR', `${errorMsg} | URL: ${apiUrl} | Status: ${status}`, 'system');
-        
-        // Log estruturado do erro de rede
-        const networkLogEntry = {
-          timestamp,
-          endpoint: 'v3.football.api-sports.io/fixtures',
-          method: 'GET',
-          params: { date: targetDate, status },
-          error: 'NETWORK_ERROR',
-          message: errorMsg
-        };
-        console.log('API_FOOTBALL_LOG:', JSON.stringify(networkLogEntry));
       }
     }
 
@@ -1010,25 +934,10 @@ async function handleUnifiedGamesAPI(request, env) {
     console.error(`[${timestamp}] INTERNAL_ERROR: ${errorMsg}`);
     addAuditLog('INTERNAL_ERROR', `${errorMsg} | Data: ${targetDate}`, 'system');
     
-    // Log estruturado do erro interno
-    const internalLogEntry = {
-      timestamp,
-      endpoint: '/api/games',
-      method: 'GET',
-      params: { date: targetDate },
-      error: 'INTERNAL_ERROR',
-      message: errorMsg
-    };
-    console.log('API_FOOTBALL_LOG:', JSON.stringify(internalLogEntry));
-    
-    // Em caso de erro, retornar lista vazia com header de erro
+    // Em caso de erro, retornar lista vazia
     return new Response(JSON.stringify([]), {
-      status: 500,
-      headers: { 
-        'Content-Type': 'application/json', 
-        'X-API-FOOTBALL-ERROR': errorMsg,
-        ...CORS_HEADERS 
-      }
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
   }
 }
