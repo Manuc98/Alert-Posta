@@ -1,0 +1,63 @@
+.logs {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  color: #7f8c8d;
+}
+
+.logs-content {
+  background: #2c3e50;
+  color: #ecf0f1;
+  padding: 1.5rem;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.log-entry {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.log-entry:hover {
+  background: #34495e;
+}
+
+.log-time {
+  color: #95a5a6;
+  min-width: 150px;
+}
+
+.log-level {
+  min-width: 60px;
+  font-weight: bold;
+}
+
+.log-level.info {
+  color: #3498db;
+}
+
+.log-level.warning {
+  color: #f39c12;
+}
+
+.log-level.error {
+  color: #e74c3c;
+}
+
+.log-message {
+  flex: 1;
+}
