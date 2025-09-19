@@ -12,7 +12,7 @@ export default {
 
   
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: CORS_HEADERS });
+      return new Response(null, { headers: { ...CORS_HEADERS } });
     }
 
     // Servir logo real
@@ -95,7 +95,7 @@ export default {
       return handleAPI(request, env, path);
     }
 
-    return new Response('Not Found', { status: 404, headers: CORS_HEADERS });
+    return new Response('Not Found', { status: 404, headers: { ...CORS_HEADERS } });
   },
 
   async scheduled(event, env, ctx) {
@@ -487,7 +487,7 @@ async function handleAPI(request, env, path) {
 
     // Endpoints de utilizadores removidos - SISTEMA SEM AUTENTICACAO
 
-    return new Response('API endpoint not found', { status: 404, headers: CORS_HEADERS });
+    return new Response('API endpoint not found', { status: 404, headers: { ...CORS_HEADERS } });
     } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ success: false, error: error.message }), {
@@ -2025,7 +2025,7 @@ async function handleCommentatorAPI(request, env) {
     });
   }
 
-  return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
+  return new Response('Method not allowed', { status: 405, headers: { ...CORS_HEADERS } });
 }
 
 // API para sinais
@@ -4711,7 +4711,7 @@ function getDashboardHTML() {
                     });
                 }
                 
-                return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
+                return new Response('Method not allowed', { status: 405, headers: { ...CORS_HEADERS } });
                 
             } catch (error) {
                 console.error('Erro ao gerir configuracoes de notificacoes:', error);
