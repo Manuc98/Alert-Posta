@@ -3712,37 +3712,54 @@ function getDashboardHTML() {
 
         // Funções para jogos ao vivo
         async function loadLiveGames() {
+            console.log('🔄 loadLiveGames() iniciado');
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const response = await fetch('/api/games?date=' + today);
+                console.log('📅 Data de hoje:', today);
+                
+                const url = '/api/games?date=' + today;
+                console.log('🌐 URL da API:', url);
+                
+                const response = await fetch(url);
+                console.log('📡 Resposta da API:', response.status, response.statusText);
+                
                 if (!response.ok) {
                     throw new Error('Falha ao carregar jogos: ' + response.status);
                 }
+                
                 const games = await response.json();
+                console.log('📊 Dados recebidos:', games);
+                console.log('📊 Tipo de dados:', typeof games, 'É array?', Array.isArray(games));
                 
                 // A resposta agora é diretamente um array
                 if (Array.isArray(games)) {
                     if (games.length === 0) {
+                        console.log('⚠️ Nenhum jogo encontrado');
                         displayLiveGames([]);
                         showToast('Nenhum jogo encontrado ou erro na API', 'warning');
                     } else {
+                        console.log('✅ Jogos encontrados:', games.length);
                         displayLiveGames(games);
                         showToast(games.length + ' jogos carregados com sucesso', 'success');
                     }
                 } else {
+                    console.error('❌ Resposta inválida:', games);
                     throw new Error('Resposta inválida da API');
                 }
             } catch (error) {
-                console.error('Error loading live games:', error);
+                console.error('❌ Error loading live games:', error);
                 displayLiveGames([]);
                 showToast('Erro ao carregar jogos: ' + error.message, 'error');
             }
         }
 
         function displayLiveGames(games) {
+            console.log('🎮 displayLiveGames() chamado com:', games);
             const container = document.getElementById('live-games-list');
+            console.log('🎮 Container encontrado:', container);
             
             if (!games || games.length === 0) {
+                console.log('⚠️ Nenhum jogo para exibir');
                 container.innerHTML = '<div class="text-center text-gray-400 py-8">' +
                     '<div class="text-4xl mb-2">⚽</div>' +
                     '<p class="text-lg font-medium">Nenhum jogo encontrado ou erro na API</p>' +
