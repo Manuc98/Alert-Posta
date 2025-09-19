@@ -368,6 +368,10 @@ async function handleAPI(request, env, path) {
       return await handleDebugGames(request, env);
     }
     
+    if (path === '/api/debug-frontend') {
+      return await handleDebugFrontend(request, env);
+    }
+    
     if (path === '/api/v1/bot/module') {
       return await handleBotModule(request, env);
     }
@@ -814,6 +818,88 @@ async function handleDebugGames(request, env) {
         error_type: error.constructor.name,
         error_message: error.message
       }
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+  }
+}
+
+async function handleDebugFrontend(request, env) {
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+  
+  const timestamp = new Date().toISOString();
+  
+  try {
+    console.log(`[${timestamp}] DEBUG_FRONTEND: Verificando estado do frontend`);
+    
+    // Verificar se as variáveis de ambiente estão configuradas
+    const envStatus = {
+      API_FOOTBALL_KEY: !!env.API_FOOTBALL_KEY,
+      TELEGRAM_TOKEN: !!env.TELEGRAM_TOKEN,
+      TELEGRAM_GROUP_ID: !!env.TELEGRAM_GROUP_ID,
+      ENVIRONMENT: env.ENVIRONMENT || 'not_set'
+    };
+    
+    // Testar endpoints básicos
+    const endpoints = [
+      { name: 'games', url: '/api/games?date=2025-09-19' },
+      { name: 'start-bot', url: '/api/start-bot' },
+      { name: 'stop-bot', url: '/api/stop-bot' },
+      { name: 'analyze-games', url: '/api/analyze-games' }
+    ];
+    
+    const endpointStatus = [];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const testUrl = `https://alertapostas.pt${endpoint.url}`;
+        const response = await fetch(testUrl, {
+          method: endpoint.name.includes('bot') || endpoint.name.includes('analyze') ? 'POST' : 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        endpointStatus.push({
+          name: endpoint.name,
+          url: endpoint.url,
+          status: response.status,
+          ok: response.ok
+        });
+      } catch (error) {
+        endpointStatus.push({
+          name: endpoint.name,
+          url: endpoint.url,
+          error: error.message
+        });
+      }
+    }
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Debug do frontend concluído',
+      timestamp,
+      debug_info: {
+        environment: envStatus,
+        endpoints: endpointStatus,
+        user_agent: request.headers.get('User-Agent'),
+        origin: request.headers.get('Origin')
+      }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+    });
+    
+  } catch (error) {
+    console.error(`[${timestamp}] DEBUG_FRONTEND_ERROR: ${error.message}`);
+    
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Erro no debug do frontend: ${error.message}`,
+      timestamp
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
@@ -3535,6 +3621,20 @@ function getDashboardHTML() {
             console.log('🚀 DOMContentLoaded executado!');
             console.log('Sistema Alert@Postas iniciado - alertapostas.pt');
             addCommentatorLog('🎯 Sistema Alert@Postas iniciado com sucesso', 'success');
+            
+            // Debug: Verificar se elementos existem
+            console.log('🔍 Verificando elementos do DOM...');
+            const elementsToCheck = [
+                'startBot', 'stopBot', 'analyzeGames', 'refreshToken',
+                'mlOverUnderToggle', 'mlWinnerToggle', 'valueBetToggle', 'nextGoalToggle',
+                'refreshGames', 'refreshLiveGames', 'gameSearch', 'clearCommentator'
+            ];
+            
+            elementsToCheck.forEach(id => {
+                const element = document.getElementById(id);
+                console.log(`${id}: ${element ? '✅ Encontrado' : '❌ Não encontrado'}`);
+            });
+            
             loadData();
             setupEventListeners();
             updateModuleStats(); // Inicializar estatísticas dos módulos
@@ -3567,8 +3667,10 @@ function getDashboardHTML() {
 
         // Funções de controlo do bot
         async function startBot() {
+            console.log('🚀 startBot() chamado!');
             try {
                 showLoading('startBot', 'Iniciando...');
+                console.log('📡 Fazendo chamada para /api/start-bot...');
                 const response = await fetch('/api/start-bot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -3854,6 +3956,7 @@ function getDashboardHTML() {
         }
 
         function setupEventListeners() {
+            console.log('🔧 Configurando event listeners...');
             
             // Botões do bot
             const startBotBtn = document.getElementById('startBot');
@@ -3861,10 +3964,28 @@ function getDashboardHTML() {
             const analyzeGamesBtn = document.getElementById('analyzeGames');
             const refreshTokenBtn = document.getElementById('refreshToken');
             
-            if (startBotBtn) startBotBtn.addEventListener('click', startBot);
-            if (stopBotBtn) stopBotBtn.addEventListener('click', stopBot);
-            if (analyzeGamesBtn) analyzeGamesBtn.addEventListener('click', analyzeGames);
-            if (refreshTokenBtn) refreshTokenBtn.addEventListener('click', refreshToken);
+            console.log('🤖 Botões do bot:');
+            console.log(`  startBot: ${startBotBtn ? '✅' : '❌'}`);
+            console.log(`  stopBot: ${stopBotBtn ? '✅' : '❌'}`);
+            console.log(`  analyzeGames: ${analyzeGamesBtn ? '✅' : '❌'}`);
+            console.log(`  refreshToken: ${refreshTokenBtn ? '✅' : '❌'}`);
+            
+            if (startBotBtn) {
+                startBotBtn.addEventListener('click', startBot);
+                console.log('✅ Event listener adicionado ao startBot');
+            }
+            if (stopBotBtn) {
+                stopBotBtn.addEventListener('click', stopBot);
+                console.log('✅ Event listener adicionado ao stopBot');
+            }
+            if (analyzeGamesBtn) {
+                analyzeGamesBtn.addEventListener('click', analyzeGames);
+                console.log('✅ Event listener adicionado ao analyzeGames');
+            }
+            if (refreshTokenBtn) {
+                refreshTokenBtn.addEventListener('click', refreshToken);
+                console.log('✅ Event listener adicionado ao refreshToken');
+            }
 
             // Módulos ML
             const mlOverUnderToggle = document.getElementById('mlOverUnderToggle');
