@@ -3,15 +3,6 @@ main = "src/index-site.js"
 compatibility_date = "2025-01-19"
 compatibility_flags = ["nodejs_compat"]
 
-# Configuração de build
-[build]
-command = "npm run build"
-cwd = "."
-
-# Configuração para servir ficheiros estáticos
-[site]
-bucket = "./dist"
-
 # Variáveis de ambiente
 [vars]
 ENVIRONMENT = "production"
